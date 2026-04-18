@@ -85,11 +85,13 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     extracted_symptoms: List[str]
+    symptom_timeline: List[str] = []
     top_conditions: List[dict]
     rag_sources: List[str]
     graph_followups: List[str]
     red_flags_detected: List[str]
     traversal_path: List[dict] = []
+    journey_edges: List[dict] = []
 
 class GraphNode(BaseModel):
     id: str
@@ -172,6 +174,46 @@ RULES:
 # Chat endpoint
 # ---------------------------------------------------------------------------
 
+FINAL_LINK_THRESHOLD = 0.65
+
+
+def merge_symptom_timeline(existing: List[str], newly_extracted: List[str]) -> List[str]:
+    """Merge symptoms while preserving first-seen order across turns."""
+    merged: List[str] = []
+    seen = set()
+    for symptom in (existing or []) + (newly_extracted or []):
+        normalised = symptom.strip().lower()
+        if not normalised or normalised in seen:
+            continue
+        seen.add(normalised)
+        merged.append(normalised)
+    return merged
+
+
+def build_journey_edges(symptom_timeline: List[str], candidates: List[dict]) -> List[dict]:
+    """Build sequential symptom path and optional final symptom->condition edge."""
+    edges: List[dict] = []
+
+    for i in range(len(symptom_timeline) - 1):
+        edges.append({
+            "from": symptom_timeline[i],
+            "to": symptom_timeline[i + 1],
+            "edge_type": "SEQUENTIAL_SYMPTOM",
+        })
+
+    if symptom_timeline and candidates:
+        top = candidates[0]
+        score = float(top.get("score", 0))
+        if score >= FINAL_LINK_THRESHOLD:
+            edges.append({
+                "from": symptom_timeline[-1],
+                "to": top.get("condition_id", ""),
+                "edge_type": "SYMPTOM_TO_CONDITION",
+                "score": round(score, 3),
+            })
+
+    return edges
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
@@ -186,9 +228,10 @@ async def chat(request: ChatRequest):
 
         # --- Step 1: NLP extraction ---
         extraction = NLP.extract(latest_user_msg)
-        all_symptoms = list(set(
-            (request.extracted_symptoms or []) + extraction.symptoms
-        ))
+        all_symptoms = merge_symptom_timeline(
+            request.extracted_symptoms or [],
+            extraction.symptoms,
+        )
 
         # --- Step 2: Red flag check ---
         red_flags = check_red_flags(GRAPH, all_symptoms + (extraction.symptoms if extraction else []))
@@ -200,6 +243,8 @@ async def chat(request: ChatRequest):
         if candidates:
             top_condition = candidates[0]["condition_id"]
             followup_questions = get_followup_questions(GRAPH, top_condition)
+
+        journey_edges = build_journey_edges(all_symptoms, candidates)
 
         # --- Step 4: RAG retrieval ---
         rag_context = RAG.retrieve_context(latest_user_msg, top_k=2)
@@ -242,6 +287,7 @@ async def chat(request: ChatRequest):
         return ChatResponse(
             reply=reply,
             extracted_symptoms=all_symptoms,
+            symptom_timeline=all_symptoms,
             top_conditions=[
                 {
                     "display":       c["display"],
@@ -256,6 +302,7 @@ async def chat(request: ChatRequest):
             graph_followups=followup_questions[:4],
             red_flags_detected=red_flags,
             traversal_path=candidates[0].get("traversal_path", []) if candidates else [],
+            journey_edges=journey_edges,
         )
     except Exception as overall_e:
         import traceback
