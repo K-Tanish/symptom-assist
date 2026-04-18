@@ -291,10 +291,12 @@
       position: relative;
       overflow: hidden;
       background: radial-gradient(ellipse at 50% 40%, #f0fdfa 0%, #f8fafc 100%);
-    }
+
     #graph-svg {
-      width: 100%; height: 100%;
-    }
+  width: 800px; 
+  height: 600px;
+}
+
 
     /* Nodes */
     .g-node circle {
@@ -505,7 +507,7 @@
     <!-- TAB 2: Traversal Graph -->
     <div id="panel-graph" class="tab-panel" style="flex:1;position:relative;overflow:hidden;background:#f8fafc;">
       <div id="graph-panel" style="width:100%;height:100%;overflow:hidden;position:relative;">
-        <svg id="graph-svg" style="width:100%;height:100%;"></svg>
+       <svg id="graph-svg" width="800" height="600" viewBox="0 0 800 600"></svg>
         <div id="graph-empty-hint" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
           <p style="color:#94a3b8;font-size:13px;margin-top:12px;text-align:center;line-height:1.6;">Graph builds as you chat.<br/>Send a symptom description to begin traversal.</p>
@@ -582,8 +584,12 @@
     if (existing) existing.innerHTML = '';
 
     const svg = d3.select('#graph-svg')
-      .style('background', THEME.bg)
-      .style('font-family', "'Inter', 'Roboto', sans-serif");
+  .attr('width', 800)
+  .attr('height', 600)
+  .attr('viewBox', '0 0 800 600')
+  .style('background', THEME.bg)
+  .style('font-family', "'Inter', 'Roboto', sans-serif");
+
 
     GRAPH.svg = svg;
     const g = svg.append('g').attr('class', 'graph-root');
