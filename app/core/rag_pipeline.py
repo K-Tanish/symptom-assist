@@ -100,12 +100,14 @@ class SemanticRetriever:
 
 class RAGPipeline:
     def __init__(self, csv_path: str | None = None):
-        if csv_path and os.path.exists(csv_path):
-            documents = load_documents_from_csv(csv_path)
+        resolved_path = csv_path or os.getenv("MEDICAL_DOCS_CSV_PATH", "data/medical_docs.csv")
+
+        if resolved_path and os.path.exists(resolved_path):
+            documents = load_documents_from_csv(resolved_path)
         else:
             # Fallback: empty (should not normally reach here)
             documents = []
-            print("[RAG] WARNING: no medical_docs.csv found; RAG context will be empty.")
+            print(f"[RAG] WARNING: medical docs CSV not found at '{resolved_path}'; RAG context will be empty.")
 
         self.retriever = SemanticRetriever()
         self.retriever.index(documents)
