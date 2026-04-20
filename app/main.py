@@ -26,6 +26,10 @@ from pydantic import BaseModel
 from typing import List, Optional
 from groq import Groq
 from dotenv import load_dotenv
+import logging
+
+from .core.error_handler import APIErrorHandler, retry_with_backoff
+from .logging_config import setup_logging
 
 from .core.knowledge_graph import (
     load_graph_from_csv, traverse_graph, find_candidate_conditions,
@@ -35,6 +39,7 @@ from .core.rag_pipeline import RAGPipeline
 from .core.nlp_extractor import SymptomExtractor
 
 load_dotenv()
+setup_logging(log_dir="logs", level=logging.INFO)
 
 # ---------------------------------------------------------------------------
 # Resolve dataset paths (relative to the project root)
@@ -177,6 +182,30 @@ RULES:
 FINAL_LINK_THRESHOLD = 0.65
 
 
+@retry_with_backoff(max_retries=2, base_delay=1.0)
+def call_groq_api(messages: list, model: str = "llama-3.1-8b-instant") -> str:
+    """
+    Call Groq API with proper error handling and retry logic.
+    
+    Args:
+        messages: List of message dicts with role and content
+        model: Model name to use
+    
+    Returns:
+        str: API response content
+    
+    Raises:
+        Various exceptions with user-friendly handling
+    """
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+        messages=messages,
+        max_tokens=1000,
+        temperature=0.3,
+    )
+    return chat_completion.choices[0].message.content
+
+
 def merge_symptom_timeline(existing: List[str], newly_extracted: List[str]) -> List[str]:
     """Preserve first-seen order across turns while removing duplicates."""
     merged: List[str] = []
@@ -272,19 +301,12 @@ async def chat(request: ChatRequest):
             messages.append({"role": role, "content": m.content})
 
         try:
-            chat_completion = GROQ.chat.completions.create(
-                model="llama-3.1-8b-instant", 
-                messages=messages,
-                max_tokens=1000,
-                temperature=0.3,
-            )
-            reply = chat_completion.choices[0].message.content
+            reply = call_groq_api(messages)
         except Exception as e:
-            print(f"DEBUG: Groq API Error Detected: {e}")
-            if "429" in str(e) or "limit" in str(e).lower():
-                reply = "I'm sorry, I'm receiving too many requests from this account right now. Please try again soon."
-            else:
-                reply = f"I'm having trouble connecting to my reasoning engine. Error: {type(e).__name__}"
+            # Log full error for debugging
+            APIErrorHandler.log_error(e, "Groq API call failed in /chat endpoint")
+            # Get user-friendly message
+            reply = APIErrorHandler.get_user_message(e)
 
         return ChatResponse(
             reply=reply,
@@ -311,9 +333,10 @@ async def chat(request: ChatRequest):
         err_msg = traceback.format_exc()
         print("CRITICAL ERROR IN /chat ENDPOINT:")
         print(err_msg)
+        APIErrorHandler.log_error(overall_e, "Critical error in /chat endpoint")
         with open("error_log.txt", "w") as f:
             f.write(err_msg)
-        raise HTTPException(status_code=500, detail=str(overall_e))
+        raise HTTPException(status_code=500, detail=APIErrorHandler.get_user_message(overall_e))
 
 
 # ---------------------------------------------------------------------------
