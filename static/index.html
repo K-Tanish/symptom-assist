@@ -690,47 +690,87 @@
     }
   }
 
-  function highlightGraph(symptoms, conditions, traversalPath) {
+  function normalizeGraphId(text) {
+    return (text || '').toString().trim().toLowerCase().replace(/\s+/g, '_');
+  }
+
+  function resolveGraphNodeId(item) {
+    if (!item) return null;
+
+    const rawValues = [];
+    if (typeof item === 'string') {
+      rawValues.push(item);
+    } else {
+      if (item.condition_id) rawValues.push(item.condition_id);
+      if (item.display) rawValues.push(item.display);
+      if (item.id) rawValues.push(item.id);
+    }
+
+    for (const raw of rawValues) {
+      const base = (raw || '').toString().trim().toLowerCase();
+      if (!base) continue;
+
+      const candidates = [
+        base,
+        base.replace(/\s+/g, '_'),
+        base.replace(/_/g, ' '),
+        base.replace(/[^a-z0-9_\s]/g, '').replace(/\s+/g, '_')
+      ];
+
+      for (const id of candidates) {
+        if (GRAPH.nodeMap[id]) return id;
+      }
+    }
+
+    return rawValues.length > 0 ? normalizeGraphId(rawValues[0]) : null;
+  }
+
+  function resolveGraphNode(item) {
+    const id = resolveGraphNodeId(item);
+    return id ? GRAPH.nodeMap[id] || null : null;
+  }
+
+  function highlightGraph(symptoms, conditions, journeyEdges) {
     if (!GRAPH.initialized) return;
 
     const hint = document.getElementById('graph-empty-hint');
     if (hint) hint.style.display = 'none';
 
-    // Collect active IDs & determine which is base vs followup
-    const baseSymp = symptoms && symptoms.length > 0 ? symptoms[0].toLowerCase().replace(/ /g,'_') : null;
-    const followupSymps = new Set((symptoms || []).slice(1).map(s => s.toLowerCase().replace(/ /g,'_')));
-    
-    // Total active symptoms
-    const activeSymptoms = new Set((symptoms || []).map(s => s.toLowerCase().replace(/ /g,'_')));
-    const activeConditions = new Set((conditions || []).map(c => 
-      (c.condition_id || c.display).toLowerCase().replace(/ /g,'_')
-    ));
-    const topCondId = conditions && conditions.length > 0 ? 
-      (conditions[0].condition_id || conditions[0].display).toLowerCase().replace(/ /g,'_') : null;
+    const activeSymptoms = new Set((symptoms || []).map(resolveGraphNodeId).filter(Boolean));
+    const activeConditions = new Set((conditions || []).map(resolveGraphNodeId).filter(Boolean));
+    const topCondId = conditions && conditions.length > 0 ? resolveGraphNodeId(conditions[0]) : null;
 
-    // Build sequential path
+    // Render dynamic path strictly from backend-provided journey edges.
     const dynamicEdges = [];
-    if (symptoms && symptoms.length > 0) {
-      for (let i = 0; i < symptoms.length - 1; i++) {
-        const fromNode = GRAPH.nodeMap[symptoms[i].toLowerCase().replace(/ /g,'_')];
-        const toNode = GRAPH.nodeMap[symptoms[i+1].toLowerCase().replace(/ /g,'_')];
-        if (fromNode && toNode) dynamicEdges.push({ source: fromNode, target: toNode });
-      }
-      if (topCondId) {
-        const fromNode = GRAPH.nodeMap[symptoms[symptoms.length - 1].toLowerCase().replace(/ /g,'_')];
-        const toNode = GRAPH.nodeMap[topCondId];
-        if (fromNode && toNode) dynamicEdges.push({ source: fromNode, target: toNode });
+    for (const edge of (journeyEdges || [])) {
+      const fromNode = resolveGraphNode(edge.from);
+      const toNode = resolveGraphNode(edge.to);
+      if (fromNode && toNode) {
+        dynamicEdges.push({
+          source: fromNode,
+          target: toNode,
+          edge_type: edge.edge_type,
+          score: edge.score
+        });
       }
     }
 
-    // Draw dynamic sequential connections over existing map
+    // Draw dynamic journey connections over existing graph.
     GRAPH.dynamicLinkEls = GRAPH.gRoot.select('.dyn-edges')
       .selectAll('line')
-      .data(dynamicEdges)
+      .data(dynamicEdges, (_, i) => i)
       .join('line')
-      .attr('stroke', THEME.edge)
-      .attr('stroke-width', 2.5)
-      .attr('marker-end', 'url(#timeline-arrow)') // Requires marker def or standard shape
+      .attr('stroke', d => {
+        if (d.edge_type === 'FIRST_SYMPTOM_TO_CONDITION') return '#ea580c';
+        if (d.edge_type === 'SEQUENTIAL_SYMPTOM') return '#fb923c';
+        return THEME.edge;
+      })
+      .attr('stroke-width', d => {
+        if (d.edge_type === 'FIRST_SYMPTOM_TO_CONDITION') return 5.5;
+        if (d.edge_type === 'SEQUENTIAL_SYMPTOM') return 4;
+        return 2.5;
+      })
+      .attr('marker-end', 'url(#timeline-arrow)')
       .style('pointer-events', 'none');
 
     // Update nodes styling
@@ -739,8 +779,7 @@
       .attr('fill', d => {
         if (d.id === topCondId) return THEME.topCond;
         if (activeConditions.has(d.id)) return THEME.activeCond;
-        if (d.id === baseSymp) return THEME.activeSymp;
-        if (followupSymps.has(d.id)) return '#7c3aed'; 
+        if (activeSymptoms.has(d.id)) return THEME.activeSymp;
         return THEME.dimmedNode;
       })
       .attr('r', d => {
@@ -753,9 +792,7 @@
     GRAPH.labelEls
       .transition().duration(500)
       .attr('fill', d => {
-        if (activeConditions.has(d.id)) return '#f8fafc';
-        if (d.id === baseSymp) return '#93c5fd'; 
-        if (followupSymps.has(d.id)) return '#c4b5fd'; 
+        if (activeConditions.has(d.id) || activeSymptoms.has(d.id)) return '#f8fafc';
         return '#94a3b8';
       })
       .attr('opacity', d => {
@@ -973,14 +1010,18 @@
       const data = await res.json();
 
       removeTyping();
-      allSymptoms = data.extracted_symptoms || [];
+      allSymptoms = data.symptom_timeline || data.extracted_symptoms || [];
       history.push({ role: 'assistant', content: data.reply });
       addMessage('bot', data.reply);
       // Attach traversal path to data for dashboard rendering
       data.traversal_path = data.top_conditions?.[0]?.traversal_path || [];
       updateDashboard(data);
-      // Update graph highlighting with newly active nodes and BFS traversal
-      highlightGraph(data.extracted_symptoms, data.top_conditions, data.traversal_path || []);
+      // Update graph highlighting with backend-provided journey edges.
+      highlightGraph(
+        data.symptom_timeline || data.extracted_symptoms || [],
+        data.top_conditions,
+        data.journey_edges || []
+      );
 
     } catch (err) {
       removeTyping();

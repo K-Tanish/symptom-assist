@@ -30,6 +30,10 @@ from pydantic import BaseModel
 from typing import List, Optional
 from groq import Groq
 from dotenv import load_dotenv
+import logging
+
+from .core.error_handler import APIErrorHandler, retry_with_backoff
+from .logging_config import setup_logging
 
 from .core.knowledge_graph import (
     
@@ -42,7 +46,7 @@ from .core.rag_pipeline import RAGPipeline
 from .core.nlp_extractor import SymptomExtractor
 
 load_dotenv()
----------------------------------------------------------------------
+
 # Resolve dataset paths (relative to the project root)
 # ---------------------------------------------------------------------------
 _PROJECT_ROOT = pathlib.Path(__file__).parent.parent
@@ -95,11 +99,13 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     extracted_symptoms: List[str]
+    symptom_timeline: List[str] = []
     top_conditions: List[dict]
     rag_sources: List[str]
     graph_followups: List[str]
     red_flags_detected: List[str]
     traversal_path: List[dict] = []
+    journey_edges: List[dict] = []
 
 class GraphNode(BaseModel):
     id: str
@@ -182,6 +188,72 @@ RULES:
 # Chat endpoint
 # ---------------------------------------------------------------------------
 
+FINAL_LINK_THRESHOLD = 0.65
+
+
+@retry_with_backoff(max_retries=2, base_delay=1.0)
+def call_groq_api(messages: list, model: str = "llama-3.1-8b-instant") -> str:
+    """
+    Call Groq API with proper error handling and retry logic.
+    
+    Args:
+        messages: List of message dicts with role and content
+        model: Model name to use
+    
+    Returns:
+        str: API response content
+    
+    Raises:
+        Various exceptions with user-friendly handling
+    """
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+        messages=messages,
+        max_tokens=1000,
+        temperature=0.3,
+    )
+    return chat_completion.choices[0].message.content
+
+
+def merge_symptom_timeline(existing: List[str], newly_extracted: List[str]) -> List[str]:
+    """Preserve first-seen order across turns while removing duplicates."""
+    merged: List[str] = []
+    seen = set()
+
+    for symptom in (existing or []) + (newly_extracted or []):
+        normalised = (symptom or "").strip().lower()
+        if not normalised or normalised in seen:
+            continue
+        seen.add(normalised)
+        merged.append(normalised)
+    return merged
+
+
+def build_journey_edges(symptom_timeline: List[str], candidates: List[dict]) -> List[dict]:
+    """Build step-by-step symptom chain and threshold-gated first symptom->condition link."""
+    edges: List[dict] = []
+
+    for i in range(len(symptom_timeline) - 1):
+        edges.append({
+            "from": symptom_timeline[i],
+            "to": symptom_timeline[i + 1],
+            "edge_type": "SEQUENTIAL_SYMPTOM",
+        })
+
+    if symptom_timeline and candidates:
+        top = candidates[0]
+        top_score = float(top.get("score", 0.0))
+        top_condition_id = top.get("condition_id", "")
+        if top_condition_id and top_score >= FINAL_LINK_THRESHOLD:
+            edges.append({
+                "from": symptom_timeline[0],
+                "to": top_condition_id,
+                "edge_type": "FIRST_SYMPTOM_TO_CONDITION",
+                "score": round(top_score, 3),
+            })
+
+    return edges
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
@@ -195,9 +267,10 @@ async def chat(request: ChatRequest):
         )
         # --- Step 1: NLP extraction ---
         extraction = NLP.extract(latest_user_msg)
-        all_symptoms = list(set(
-            (request.extracted_symptoms or []) + extraction.symptoms
-        ))
+        all_symptoms = merge_symptom_timeline(
+            request.extracted_symptoms or [],
+            extraction.symptoms,
+        )
 
         # --- Step 2: Red flag check ---
         red_flags = check_red_flags(GRAPH, all_symptoms + (extraction.symptoms if extraction else []))
@@ -209,6 +282,8 @@ async def chat(request: ChatRequest):
         if candidates:
             top_condition = candidates[0]["condition_id"]
             followup_questions = get_followup_questions(GRAPH, top_condition)
+
+        journey_edges = build_journey_edges(all_symptoms, candidates)
 
         # --- Step 4: RAG retrieval ---
         rag_context = RAG.retrieve_context(latest_user_msg, top_k=2)
@@ -234,23 +309,17 @@ async def chat(request: ChatRequest):
             messages.append({"role": role, "content": m.content})
 
         try:
-            chat_completion = GROQ.chat.completions.create(
-                model="llama-3.1-8b-instant", 
-                messages=messages,
-                max_tokens=1000,
-                temperature=0.3,
-            )
-            reply = chat_completion.choices[0].message.content
+            reply = call_groq_api(messages)
         except Exception as e:
-            print(f"DEBUG: Groq API Error Detected: {e}")
-            if "429" in str(e) or "limit" in str(e).lower():
-                reply = "I'm sorry, I'm receiving too many requests from this account right now. Please try again soon."
-            else:
-                reply = f"I'm having trouble connecting to my reasoning engine. Error: {type(e).__name__}"
+            # Log full error for debugging
+            APIErrorHandler.log_error(e, "Groq API call failed in /chat endpoint")
+            # Get user-friendly message
+            reply = APIErrorHandler.get_user_message(e)
 
         return ChatResponse(
             reply=reply,
             extracted_symptoms=all_symptoms,
+            symptom_timeline=all_symptoms,
             top_conditions=[
                 {
                     "display":       c["display"],
@@ -265,15 +334,17 @@ async def chat(request: ChatRequest):
             graph_followups=followup_questions[:4],
             red_flags_detected=red_flags,
             traversal_path=candidates[0].get("traversal_path", []) if candidates else [],
+            journey_edges=journey_edges,
         )
     except Exception as overall_e:
         import traceback
         err_msg = traceback.format_exc()
         print("CRITICAL ERROR IN /chat ENDPOINT:")
         print(err_msg)
+        APIErrorHandler.log_error(overall_e, "Critical error in /chat endpoint")
         with open("error_log.txt", "w") as f:
             f.write(err_msg)
-        raise HTTPException(status_code=500, detail=str(overall_e))
+        raise HTTPException(status_code=500, detail=APIErrorHandler.get_user_message(overall_e))
 
 
 # ---------------------------------------------------------------------------

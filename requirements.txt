@@ -4,9 +4,11 @@ fastapi
 uvicorn[standard]
 python-dotenv
 networkx
+rapidfuzz
 
 # For production-grade RAG (upgrade from TF-IDF):
-# sentence-transformers
+sentence-transformers
+scipy
 # chromadb
 
 # For production-grade NLP (upgrade from keyword matching):

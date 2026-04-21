@@ -14,7 +14,7 @@ cl_symptom/
 │   │   ├── __init__.py
 │   │   ├── knowledge_graph.py   # Symbolic Inference (NetworkX)
 │   │   ├── nlp_extractor.py     # Symptom extraction (Lexicon-based)
-│   │   └── rag_pipeline.py      # Medical RAG (TF-IDF Retrieval)
+│   │   └── rag_pipeline.py      # Medical RAG (Semantic Retrieval)
 │   ├── __init__.py
 │   └── main.py           # FastAPI Web Server (Orchestration)
 ├── data/                 # Knowledge Datasets

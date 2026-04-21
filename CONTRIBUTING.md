@@ -35,7 +35,7 @@ If you find a bug, please open an Issue on GitHub. Provide as much detail as pos
 Have an idea for a new feature? We'd love to hear it! Open an Issue describing the feature, why it would be beneficial, and any potential implementation thoughts you have.
 
 ### Pull Requests
-1. Fork the repository and create your branch from `main` and make sure that **you have starred the repository otherwise it your pr may not be considered.**
+1. Fork the repository and create your branch from `main` and make sure that <ins>**you have starred the repository otherwise it your pr may not be considered.**</ins>
 2. Ensure you have installed the requirements using `pip install -r requirements.txt`.
 3. If you've added code that should be tested, add relevant tests.
 4. Update the `README.md` if your code changes the project's setup or interface.
