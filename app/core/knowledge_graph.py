@@ -189,14 +189,15 @@ def traverse_graph(G: nx.DiGraph, symptoms: list[str]) -> list[dict]:
         if u in G and G.nodes[u].get("node_type") == "symptom":
             matched_nodes.append(u)
             continue
-        # Substring match
+        # Substring match — collect ALL matching nodes, not just the first
         found = False
         for node in G.nodes:
             if G.nodes[node].get("node_type") == "symptom":
                 if u in node or node in u:
-                    matched_nodes.append(node)
+                    if node not in matched_nodes:  # avoid duplicates
+                        matched_nodes.append(node)
                     found = True
-                    break
+                    # ✅ No break — keep scanning for more matches
         if not found:
             unmatched.append(u)
 
