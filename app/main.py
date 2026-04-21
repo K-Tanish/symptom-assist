@@ -1,4 +1,8 @@
-"""
+from .core.knowledge_graph import (
+    load_graph_from_csv, traverse_graph, find_candidate_conditions,
+    get_followup_questions, get_treatment, check_red_flags, graph_summary,
+    rank_conditions_with_temporal_context   # ✅ ADD THIS
+)"""
 main.py
 -------
 FastAPI backend for the AI-powered symptom chatbot.
@@ -28,15 +32,17 @@ from groq import Groq
 from dotenv import load_dotenv
 
 from .core.knowledge_graph import (
+    
     load_graph_from_csv, traverse_graph, find_candidate_conditions,
-    get_followup_questions, get_treatment, check_red_flags, graph_summary
+    get_followup_questions, get_treatment, check_red_flags, graph_summary,
+    rank_conditions_with_temporal_context   #  ADD THIS
+)
 )
 from .core.rag_pipeline import RAGPipeline
 from .core.nlp_extractor import SymptomExtractor
 
 load_dotenv()
-
-# ---------------------------------------------------------------------------
+---------------------------------------------------------------------
 # Resolve dataset paths (relative to the project root)
 # ---------------------------------------------------------------------------
 _PROJECT_ROOT = pathlib.Path(__file__).parent.parent
@@ -77,6 +83,10 @@ app.add_middleware(
 class Message(BaseModel):
     role: str       # "user" or "model" (Gemini uses "model", but frontend might still send it)
     content: str
+    # New fields for temporal context
+    duration: Optional[str] = None       # e.g., "3 days", "2 weeks"
+    onset_order: Optional[int] = None    # e.g., 1 for first symptom, 2 for second
+
 
 class ChatRequest(BaseModel):
     messages: List[Message]
@@ -183,7 +193,6 @@ async def chat(request: ChatRequest):
             (m.content for m in reversed(request.messages) if m.role == "user"),
             ""
         )
-
         # --- Step 1: NLP extraction ---
         extraction = NLP.extract(latest_user_msg)
         all_symptoms = list(set(
@@ -310,7 +319,16 @@ async def debug_traversal(body: dict):
     if isinstance(symptoms, str):
         symptoms = [s.strip() for s in symptoms.split(",") if s.strip()]
 
-    candidates = traverse_graph(GRAPH, symptoms)
+   
+    candidates = traverse_graph(GRAPH, all_symptoms)
+
+#  Apply temporal ranking
+if candidates:
+    candidates = rank_conditions_with_temporal_context(
+        candidates,
+        GRAPH,
+        request.messages   #  IMPORTANT: pass full messages
+    )
     traversal_path = candidates[0]["traversal_path"] if candidates else []
 
     return {

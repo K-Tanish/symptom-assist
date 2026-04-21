@@ -125,13 +125,18 @@ def load_graph_from_csv(csv_path: str) -> nx.DiGraph:
             G.add_edge(symptom, condition_id,
                        edge_type="SUGGESTS",
                        weight=weight)
-
+        expected_onset_order=1,   # primary symptoms usually appear earlier
+        typical_duration=3       # default (you can improve later)
+    )
         for symptom in confirming:
             if not G.has_node(symptom):
                 G.add_node(symptom, node_type="symptom")
             G.add_edge(condition_id, symptom,
                        edge_type="CONFIRMED_BY",
-                       weight=0.9)
+                       weight=0.9
+                       expected_onset_order=2,
+    typical_duration=5
+    )
 
     # Normalise SUGGESTS weights to [0.3, 1.0]
     suggests_weights = [
@@ -256,7 +261,52 @@ def traverse_graph(G: nx.DiGraph, symptoms: list[str]) -> list[dict]:
 
     return results[:7]   # top 7 candidates
 
+# ---------------------------------------------------------------------------
+# Temporal Ranking (NEW FEATURE)
+# ---------------------------------------------------------------------------
 
+def temporal_score(condition_id, G, messages):
+    score = 0
+
+    # Extract temporal info from messages
+    for msg in messages:
+    if msg.onset_order is None:
+        continue
+
+    for symptom_node, _, edge_data in G.in_edges(condition_id, data=True):
+        if edge_data.get("edge_type") != "SUGGESTS":
+            continue
+
+        expected_order = edge_data.get("expected_onset_order")
+        expected_duration = edge_data.get("typical_duration")
+
+        # --- Onset order matching ---
+        if expected_order is not None:
+            if msg.onset_order == expected_order:
+                score += 3
+            elif msg.onset_order > expected_order:
+                score += 1
+
+        # --- Duration matching ---
+        if msg.duration and expected_duration:
+            try:
+                user_days = int(msg.duration.split()[0])
+                diff = abs(user_days - expected_duration)
+
+                if diff <= 2:
+                    score += 2
+                elif diff <= 5:
+                    score += 1
+            except:
+                pass
+
+
+def rank_conditions_with_temporal_context(candidates, G, messages):
+    for c in candidates:
+        temp_score = temporal_score(c["condition_id"], G, messages)
+        c["score"] += temp_score  # boost existing score
+
+    return sorted(candidates, key=lambda x: x["score"], reverse=True)
 # ---------------------------------------------------------------------------
 # 3. Query helpers (same interface as before so main.py needs minimal changes)
 # ---------------------------------------------------------------------------
