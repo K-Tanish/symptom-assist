@@ -1,74 +1,101 @@
-# SymptomAssist AI: Neuro-symbolic Healthcare Diagnosis System
+# SymptomAssist
 
-SymptomAssist is a hybrid AI medical advisor that combines **Symbolic Logic** (via Knowledge Graphs) and **Neural Networks** (via LLMs) to provide accurate, grounded, and empathetic health assessments.
+Most symptom checkers give you a list of diseases and leave you to figure out the rest. SymptomAssist is different — it reasons through your symptoms the way a doctor would, combining structured medical knowledge with the conversational ability of modern LLMs.
 
----
-
-##  Project Structure
-The project the following architecture:
-
-```text
-cl_symptom/
-├── app/                  # Main application package
-│   ├── core/             # AI & Diagnostic logic
-│   │   ├── __init__.py
-│   │   ├── knowledge_graph.py   # Symbolic Inference (NetworkX)
-│   │   ├── nlp_extractor.py     # Symptom extraction (Lexicon-based)
-│   │   └── rag_pipeline.py      # Medical RAG (Semantic Retrieval)
-│   ├── __init__.py
-│   └── main.py           # FastAPI Web Server (Orchestration)
-├── data/                 # Knowledge Datasets
-│   ├── symptom_disease.csv
-│   └── medical_docs.csv
-├── static/               # Frontend Assets
-│   └── index.html        # Premium Glassmorphism UI
-├── .env                  # Environment Variables (API Keys)
-├── requirements.txt      # Project Dependencies
-├── CONTRIBUTING.md       # OSS Contributor Guidelines
-└── README.md             # This file
-```
+The result is an AI health advisor that can explain *why* it suspects something, not just *what* it suspects.
 
 ---
 
-##  Setup Instructions
+## How it works
 
-### 1. Prerequisites
-- **Python 3.10+** installed.
-- **Groq API Key**: Obtain one from [Groq Cloud Console](https://console.groq.com/).
+SymptomAssist uses a neuro-symbolic architecture — a design that keeps medical facts separate from language generation:
 
-### 2. Install Dependencies
-Run the following command in your terminal:
+- **Knowledge Graph** (NetworkX): encodes relationships between symptoms, conditions, and red flags as structured logic. This is the "memory" of the system.
+- **NLP Extractor**: reads what the user types and pulls out the symptoms being described, even when phrased casually.
+- **RAG Pipeline**: retrieves relevant excerpts from curated medical documents and injects them into the LLM prompt — so responses are grounded in real sources, not hallucinated.
+- **LLM (Groq)**: handles the conversational layer, generating empathetic and readable responses based on what the knowledge graph and RAG pipeline surface.
+
+This separation matters. The LLM never "makes up" medical facts — it only interprets and communicates what the symbolic layer has already verified.
+
+---
+
+## What you get
+
+- **Grounded assessments** — every diagnosis suggestion traces back to a knowledge base entry or retrieved document
+- **Red flag detection** — critical symptoms (chest pain, difficulty breathing, etc.) are automatically flagged and surfaced before anything else
+- **Live diagnostics panel** — see in real time which symptoms were extracted, which KB entries matched, and which documents were retrieved
+- **Clean UI** — a glassmorphism interface that doesn't feel clinical
+
+---
+
+## Getting started
+
+### Prerequisites
+
+- Python 3.10+
+- A [Groq API key](https://console.groq.com)
+
+### Install
+
 ```bash
+git clone https://github.com/K-Tanish/symptom-assist.git
+cd symptom-assist
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment
-Create/Edit the [`.env`](file:///.env) file at the project root:
-```text
-GEMINI_API_KEY=your_gemini_key_optional
+### Configure
+
+Create a `.env` file at the project root:
+
+```env
 GROQ_API_KEY=your_groq_api_key_here
+GEMINI_API_KEY=your_gemini_key_optional
 ```
-Copy the example environment file and fill in your keys:
 
+Or copy the example file:
+
+```bash
 cp .env.example .env
----
+```
 
-##  Running the System
+### Run
 
-To start the FastAPI server with live-reloading:
 ```bash
 python -m app.main
 ```
-Once started, open your browser at [**http://127.0.0.1:8000**](http://127.0.0.1:8000).
+
+Then open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 
 ---
 
-##  Key Technical Features
-1.  **Neuro-symbolic Reasoning**: Decouples medical facts from conversational reasoning (LLM).
-2.  **Logic-Grounded RAG**: Injects curated medical documentation into the LLM prompt to eliminate hallucinations.
-3.  **Real-time Diagnostics Dashboard**: Live visualization of extracted symptoms, KB matches, and RAG sources.
-4.  **Priority Red Flag Detection**: Automatic highlighting of critical symptoms requiring emergency care.
+## Project structure
+
+```
+cl_symptom/
+├── app/
+│   ├── core/
+│   │   ├── knowledge_graph.py   # Symbolic inference (NetworkX)
+│   │   ├── nlp_extractor.py     # Symptom extraction
+│   │   └── rag_pipeline.py      # Medical RAG pipeline
+│   └── main.py                  # FastAPI server
+├── data/
+│   ├── symptom_disease.csv
+│   └── medical_docs.csv
+├── static/
+│   └── index.html               # Frontend
+├── .env
+├── requirements.txt
+└── CONTRIBUTING.md
+```
 
 ---
 
+## Contributing
 
+Contributions are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to get started — whether that's improving the knowledge base, extending the NLP extractor, or refining the UI.
+
+---
+
+## Disclaimer
+
+SymptomAssist is not a substitute for professional medical advice. It is an educational and research tool. Always consult a qualified healthcare provider for medical decisions.
