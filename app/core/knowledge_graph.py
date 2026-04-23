@@ -125,19 +125,20 @@ def load_graph_from_csv(csv_path: str) -> nx.DiGraph:
             G.add_edge(symptom, condition_id,
                        edge_type="SUGGESTS",
                        weight=weight)
-        expected_onset_order=1,   # primary symptoms usually appear earlier
-        typical_duration=3       # default (you can improve later)
-    )
-        for symptom in confirming:
-            if not G.has_node(symptom):
-                G.add_node(symptom, node_type="symptom")
-            G.add_edge(condition_id, symptom,
-                       edge_type="CONFIRMED_BY",
-                       weight=0.9
-                       expected_onset_order=2,
-    typical_duration=5
-    )
+        expected_onset_order=2,   # primary symptoms usually appear earlier
+        typical_duration=5      # default (you can improve later)
+    for symptom in confirming:
+     if not G.has_node(symptom):
+        G.add_node(symptom, node_type="symptom")
 
+     G.add_edge(
+        condition_id,
+        symptom,
+        edge_type="CONFIRMED_BY",
+        weight=0.9,
+        expected_onset_order=2,
+        typical_duration=5
+    )
     # Normalise SUGGESTS weights to [0.3, 1.0]
     suggests_weights = [
         d["weight"]
@@ -270,7 +271,7 @@ def temporal_score(condition_id, G, messages):
 
     # Extract temporal info from messages
     for msg in messages:
-    if msg.onset_order is None:
+     if msg.onset_order is None:
         continue
 
     for symptom_node, _, edge_data in G.in_edges(condition_id, data=True):

@@ -1,22 +1,7 @@
-from .core.knowledge_graph import (
-    load_graph_from_csv, traverse_graph, find_candidate_conditions,
-    get_followup_questions, get_treatment, check_red_flags, graph_summary,
-    rank_conditions_with_temporal_context   # ✅ ADD THIS
-)"""
+"""
 main.py
 -------
 FastAPI backend for the AI-powered symptom chatbot.
-
-Architecture:
-  1. User message arrives at POST /chat
-  2. NLP extractor pulls symptom keywords from text  (dynamic lexicon from CSV)
-  3. Knowledge Graph built from CSV; BFS traversal finds candidate conditions
-  4. RAG pipeline retrieves relevant medical documents  (loaded from CSV)
-  5. All context is injected into the LLM prompt
-  6. LLM responds grounded in the retrieved medical knowledge
-
-Dataset-driven: conditions, symptoms, and documents all come from
-  data/symptom_disease.csv  and  data/medical_docs.csv
 """
 
 import os
@@ -32,17 +17,21 @@ from groq import Groq
 from dotenv import load_dotenv
 
 from .core.knowledge_graph import (
-    
-    load_graph_from_csv, traverse_graph, find_candidate_conditions,
-    get_followup_questions, get_treatment, check_red_flags, graph_summary,
-    rank_conditions_with_temporal_context   #  ADD THIS
-)
+    load_graph_from_csv,
+    traverse_graph,
+    find_candidate_conditions,
+    get_followup_questions,
+    get_treatment,
+    check_red_flags,
+    graph_summary,
+    rank_conditions_with_temporal_context
 )
 from .core.rag_pipeline import RAGPipeline
 from .core.nlp_extractor import SymptomExtractor
 
 load_dotenv()
----------------------------------------------------------------------
+
+#---------------------------------------------------------------------
 # Resolve dataset paths (relative to the project root)
 # ---------------------------------------------------------------------------
 _PROJECT_ROOT = pathlib.Path(__file__).parent.parent
@@ -320,28 +309,50 @@ async def debug_traversal(body: dict):
         symptoms = [s.strip() for s in symptoms.split(",") if s.strip()]
 
    
-    candidates = traverse_graph(GRAPH, all_symptoms)
+    candidates = traverse_graph(GRAPH,symptoms)
 
 #  Apply temporal ranking
-if candidates:
-    candidates = rank_conditions_with_temporal_context(
-        candidates,
-        GRAPH,
-        request.messages   #  IMPORTANT: pass full messages
-    )
-    traversal_path = candidates[0]["traversal_path"] if candidates else []
+@app.post("/chat")
+async def chat(request: ChatRequest):
 
+    # ✅ Step 1: Extract symptoms from messages
+    symptoms = []
+    for msg in request.messages:
+        extracted = NLP.extract(msg.content)
+        symptoms.extend(extracted)
+
+    # ✅ Step 2: Merge with previous symptoms
+    all_symptoms = request.extracted_symptoms or []
+    all_symptoms.extend(symptoms)
+
+    # ✅ Step 3: BFS traversal
+    candidates = traverse_graph(GRAPH, all_symptoms)
+
+    # ✅ Step 4: Apply temporal ranking
+    if candidates:
+        candidates = rank_conditions_with_temporal_context(
+            candidates,
+            GRAPH,
+            request.messages
+        )
+        traversal_path = candidates[0]["traversal_path"]
+    else:
+        traversal_path = []
+
+    # ✅ Step 5: Return response
     return {
-        "input_symptoms":   symptoms,
-        "bfs_steps":        traversal_path,
-        "steps_count":      len(traversal_path),
-        "top_conditions":   [
-            {"condition": c["display"], "score": c["score"], "severity": c["severity"]}
+        "input_symptoms": all_symptoms,
+        "bfs_steps": traversal_path,
+        "steps_count": len(traversal_path),
+        "top_conditions": [
+            {
+                "condition": c["display"],
+                "score": c["score"],
+                "severity": c["severity"]
+            }
             for c in candidates[:5]
-        ],
-        "graph_stats":      graph_summary(GRAPH),
+        ] if candidates else []
     }
-
 
 # ---------------------------------------------------------------------------
 # Graph data endpoint
@@ -394,5 +405,5 @@ def index():
     return FileResponse("static/index.html")
 
 if __name__ == "__main__":
-    import uvicorn
+    import  uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
