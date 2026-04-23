@@ -345,6 +345,7 @@
       position: relative;
       overflow: hidden;
       background: radial-gradient(ellipse at 50% 40%, #f0fdfa 0%, #f8fafc 100%);
+    }
 
     #graph-svg {
   width: 800px; 
@@ -1090,10 +1091,13 @@
   }
 
   // Init
-  window.onload = () => {
+ window.onload = () => {
     loadFullGraph();
-    addMessage('bot', "Welcome to SymptomAssist AI. Describe your symptoms in detail — the medical knowledge graph (built from 41 conditions and 130+ symptoms from a real dataset) will be traversed using BFS to identify likely conditions.\n\nHow are you feeling today?");
-  }
+    addMessage(
+        'bot',
+        "Welcome to SymptomAssist AI. Describe your symptoms in detail — the medical knowledge graph (built from real datasets) will assist you."
+    );
+};
 </script>
 </body>
 </html>
