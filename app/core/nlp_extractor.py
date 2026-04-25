@@ -28,6 +28,14 @@ except ImportError:  # pragma: no cover
 # Minimum similarity score (0-100) to accept a fuzzy match
 FUZZY_THRESHOLD = 85
 
+# Optional: use spaCy for better dependency parsing and tense detection.
+try:
+    import spacy
+    _SPACY_AVAILABLE = True
+except Exception:
+    spacy = None  # type: ignore
+    _SPACY_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # 1. Synonym generator — turns dataset symptom names into lexicon entries
@@ -210,17 +218,10 @@ def build_lexicon_from_csv(csv_path: str) -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 
 class ExtractionResult(NamedTuple):
-    """
-    Represents the result of symptom extraction.
-
-    Attributes:
-        symptoms (list): List of detected canonical symptom names.
-        raw_mentions (list): List of original matched phrases from input text.
-        negated (list): List of symptoms that were negated in the input.
-    """
-    symptoms:    list   # canonical symptom names found
+    symptoms:    list   # canonical symptom names found (present/current)
     raw_mentions: list  # original phrases from user text
     negated:     list   # symptoms mentioned but negated ("no fever")
+    tagged:      list   # list of dicts: {symptom, status: present|past|negated, raw, span}
 
 
 class SymptomExtractor:
@@ -262,6 +263,35 @@ class SymptomExtractor:
             r"no sign of|denies|absence of)\b",
             re.IGNORECASE
         )
+        # Temporal cue patterns for simple heuristic detection
+        self.past_cues = re.compile(r"\b(yesterday|last night|last week|last month|ago|previously|earlier|previous)\b", re.IGNORECASE)
+        self.present_cues = re.compile(r"\b(now|currently|today|at the moment|right now|still|ongoing|since)\b", re.IGNORECASE)
+        self.negation_tokens = {
+            "no", "not", "without", "never", "none", "neither", "denies", "deny", "denied",
+            "dont", "don't", "doesnt", "doesn't", "havent", "haven't", "hasnt", "hasn't",
+            "didnt", "didn't", "cannot", "can't",
+        }
+        self.past_tokens = {
+            "was", "were", "had", "previously", "earlier", "before", "yesterday",
+            "ago", "last", "started", "initially", "former", "used to",
+        }
+        self.present_tokens = {
+            "now", "currently", "today", "still", "ongoing", "present", "currently",
+            "right now", "at the moment",
+        }
+        self.resolution_tokens = {"anymore", "resolved", "better", "improving", "improved", "fine"}
+        self.clause_splitter = re.compile(r"\b(?:but|however|although|though|yet)\b|[.,;]", re.IGNORECASE)
+
+        # Load spaCy model lazily if available; don't fail if not installed.
+        self.nlp = None
+        if _SPACY_AVAILABLE:
+            try:
+                try:
+                    self.nlp = spacy.load("en_core_web_sm")
+                except Exception:
+                    self.nlp = spacy.blank("en")
+            except Exception:
+                self.nlp = None
 
         # Initialize spaCy for dependency-based negation parsing
         try:
@@ -344,29 +374,99 @@ class SymptomExtractor:
         return matched_phrase, self.phrase_to_symptom[matched_phrase]
 
     def extract(self, text: str) -> ExtractionResult:
-        """
-        Extracts symptoms from input text.
-
-        Performs exact matching, negation detection, and fuzzy matching
-        to identify symptoms mentioned by the user.
-
-        Args:
-            text (str): User input text describing symptoms.
-
-        Returns:
-            ExtractionResult: Contains detected symptoms, raw mentions,
-            and negated symptoms.
-
-        Example:
-            >>> extractor.extract("I have fever but no cough")
-            ExtractionResult(symptoms=["fever"], raw_mentions=["fever"], negated=["cough"])
-        """
         text_lower = text.lower()
-        doc = self.nlp(text) if self.nlp else None
+        clause_ranges = self._build_clause_ranges(text_lower)
+
+        # Use spaCy doc if available for better scope/tense detection
+        doc = None
+        if self.nlp:
+            try:
+                doc = self.nlp(text)
+            except Exception:
+                doc = None
+
+        # Detect negation windows (fallback heuristic: 40 chars after negation keyword)
+        negated_spans: set[tuple] = set()
+        for match in self.negation_patterns.finditer(text_lower):
+            start = match.end()
+            end = min(start + 40, len(text_lower))
+            negated_spans.add((start, end))
+
+        def is_negated(pos: int, endpos: int) -> bool:
+            # Prefer dependency-based negation detection when spaCy available
+            if doc is not None:
+                for token in doc:
+                    if token.idx <= pos < token.idx + len(token.text):
+                        # children with neg dependency
+                        if any(ch.dep_ == "neg" for ch in token.children):
+                            return True
+                        # head may have negation
+                        if any(ch.dep_ == "neg" for ch in token.head.children):
+                            return True
+                        # nearby lemmas
+                        window_start = max(0, token.i - 3)
+                        window_end = min(len(doc), token.i + 3)
+                        for i in range(window_start, window_end):
+                            if doc[i].lemma_.lower() in {"no", "not", "never", "without", "deny", "denies", "n't"}:
+                                return True
+                        return False # Trust spaCy if it's available and found the token
+            # fallback: positional + clause-aware heuristic
+            if any(s <= pos <= e for s, e in negated_spans):
+                return True
+            clause_text = self._clause_text_for_span(text_lower, pos, endpos, clause_ranges)
+            return self._contains_negation(clause_text)
+
+        def detect_status(pos: int, endpos: int) -> str:
+            """Return one of: 'negated', 'past', 'present' (default)."""
+            if is_negated(pos, endpos):
+                return "negated"
+
+            # Use spaCy verb tense if available
+            if doc is not None:
+                mention_token = None
+                for token in doc:
+                    if token.idx <= pos < token.idx + len(token.text):
+                        mention_token = token
+                        break
+
+                if mention_token is not None:
+                    verbs = []
+                    head = mention_token.head
+                    if head.pos_ == "VERB":
+                        verbs.append(head)
+                    for t in doc[max(0, mention_token.i - 4): mention_token.i + 4]:
+                        if t.pos_ == "VERB":
+                            verbs.append(t)
+
+                    for v in verbs:
+                        if v.tag_.startswith("VBD") or v.morph.get("Tense") == ["Past"]:
+                            return "past"
+                        if v.tag_.startswith("VBG") or v.morph.get("Tense") == ["Pres"]:
+                            return "present"
+
+            # Clause-aware fallback before local character window.
+            clause_text = self._clause_text_for_span(text_lower, pos, endpos, clause_ranges)
+            if self._contains_resolution(clause_text):
+                return "past"
+            if self._contains_past(clause_text) and not self._contains_present(clause_text):
+                return "past"
+            if self._contains_present(clause_text):
+                return "present"
+            # Fallback: look for temporal cue words near the mention in the raw text
+            window_text = text_lower[max(0, pos - 60): min(len(text_lower), endpos + 60)]
+            if self.past_cues.search(window_text):
+                # "now/currently" in the same window should win when both exist.
+                if not self.present_cues.search(window_text):
+                    return "past"
+            if self.present_cues.search(window_text):
+                return "present"
+
+            return "present"
 
         found_symptoms:   list[str] = []
         negated_symptoms: list[str] = []
         raw_mentions:     list[str] = []
+        tagged:           list[dict] = []
         matched_positions: set[int] = set()
 
         for phrase in self.sorted_phrases:
@@ -381,15 +481,25 @@ class SymptomExtractor:
                     continue
 
                 canonical = self.phrase_to_symptom[phrase]
-                raw_mentions.append(text[idx: idx + len(phrase)])
+                raw = text[idx: idx + len(phrase)]
+                raw_mentions.append(raw)
                 matched_positions |= positions
 
-                if self._is_negated(doc, idx, idx + len(phrase)):
+                status = detect_status(idx, idx + len(phrase))
+
+                if status == "negated":
                     if canonical not in negated_symptoms:
                         negated_symptoms.append(canonical)
                 else:
                     if canonical not in found_symptoms:
                         found_symptoms.append(canonical)
+
+                tagged.append({
+                    "symptom": canonical,
+                    "status": status,
+                    "raw": raw,
+                    "span": (idx, idx + len(phrase)),
+                })
 
                 start = idx + 1
 
@@ -438,7 +548,52 @@ class SymptomExtractor:
             symptoms     = found_symptoms,
             raw_mentions = raw_mentions,
             negated      = negated_symptoms,
+            tagged       = tagged,
         )
+
+    def _build_clause_ranges(self, text_lower: str) -> list[tuple[int, int]]:
+        ranges: list[tuple[int, int]] = []
+        start = 0
+        for match in self.clause_splitter.finditer(text_lower):
+            end = match.start()
+            if end > start:
+                ranges.append((start, end))
+            start = match.end()
+        if start < len(text_lower):
+            ranges.append((start, len(text_lower)))
+        return ranges or [(0, len(text_lower))]
+
+    def _clause_text_for_span(
+        self,
+        text_lower: str,
+        start: int,
+        end: int,
+        clause_ranges: list[tuple[int, int]],
+    ) -> str:
+        for c_start, c_end in clause_ranges:
+            if c_start <= start < c_end or c_start < end <= c_end:
+                return text_lower[c_start:c_end]
+        return text_lower[max(0, start - 60): min(len(text_lower), end + 60)]
+
+    def _contains_negation(self, text_fragment: str) -> bool:
+        words = set(re.findall(r"[a-z']+", text_fragment))
+        return any(w in words for w in self.negation_tokens)
+
+    def _contains_past(self, text_fragment: str) -> bool:
+        if self.past_cues.search(text_fragment):
+            return True
+        words = set(re.findall(r"[a-z']+", text_fragment))
+        return any(w in words for w in self.past_tokens)
+
+    def _contains_present(self, text_fragment: str) -> bool:
+        if self.present_cues.search(text_fragment):
+            return True
+        words = set(re.findall(r"[a-z']+", text_fragment))
+        return any(w in words for w in self.present_tokens)
+
+    def _contains_resolution(self, text_fragment: str) -> bool:
+        words = set(re.findall(r"[a-z']+", text_fragment))
+        return any(w in words for w in self.resolution_tokens)
 
 
 # ---------------------------------------------------------------------------

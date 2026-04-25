@@ -1,45 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SymptomAssist AI | Intelligent Medical Reasoning</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
   <style>
     :root {
-      --primary: #0f766e;
-      --primary-light: #14b8a6;
-      --primary-dark: #0d9488;
-      --bg: #f8fafc;
-      --sidebar-bg: rgba(255, 255, 255, 0.7);
-      --chat-bg: #ffffff;
+      --primary: #14b8a6;
+      --primary-light: #5eead4;
+      --primary-dark: #0f766e;
+      --bg: #edf4ff;
+      --sidebar-bg: #f4f8ff;
+      --chat-bg: #172338;
       --text-main: #0f172a;
       --text-muted: #64748b;
-      --glass-border: rgba(255, 255, 255, 0.3);
+      --glass-border: rgba(30, 41, 59, 0.2);
       --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
       --urgent: #ef4444;
     }
 
-    .dark-mode {
-      --bg: #0f172a;
-      --chat-bg: #020617;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --sidebar-bg:  #020617;
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Inter', sans-serif;
-      background: var(--bg);
+      background: radial-gradient(circle at top left, #dbeafe, #cbd5e1);
       height: 100vh;
       display: flex;
       justify-content: center;
@@ -58,7 +59,7 @@
       width: 95vw;
       height: 90vh;
       max-width: 1400px;
-      background: rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.78);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--glass-border);
@@ -79,7 +80,7 @@
       flex-direction: column;
       position: relative;
       background: var(--chat-bg);
-      border-right: 1px solid rgba(226, 232, 240, 0.8);
+      border-right: 1px solid rgba(203, 213, 225, 0.9);
     }
 
     .dark-mode #chat-section {
@@ -91,32 +92,84 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #f1f5f9;
-      background: var(--chat-bg);
+      border-bottom: 1px solid #314158;
+      background: rgba(23, 35, 56, 0.84);
     }
 
-    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
     .brand-icon {
-      width: 44px; height: 44px;
+      width: 44px;
+      height: 44px;
       background: linear-gradient(135deg, var(--primary), var(--primary-light));
       border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       box-shadow: 0 8px 16px rgba(15, 118, 110, 0.2);
     }
-    .brand-icon svg { width: 24px; height: 24px; stroke: #fff; }
-    
-    .brand-text h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: 800; color: var(--text-main); letter-spacing: -0.02em; }
-    .brand-text p { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+
+    .brand-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: #fff;
+    }
+
+    .brand-text h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      color: #e2e8f0;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text p {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
 
     .status-indicator {
-      display: flex; align-items: center; gap: 8px;
-      background: #f0fdf4; color: #166534;
-      padding: 6px 12px; border-radius: 99px;
-      font-size: 11px; font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(20, 184, 166, 0.15);
+      color: #99f6e4;
+      padding: 6px 12px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
     }
-    .status-dot { width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 10px #22c55e; animation: pulse 2s infinite; }
 
-    @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background: #22c55e;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
 
     #chat-area {
       flex: 1;
@@ -128,155 +181,207 @@
       scroll-behavior: smooth;
     }
 
-    #chat-area::-webkit-scrollbar { width: 6px; }
-    #chat-area::-webkit-scrollbar-track { background: transparent; }
-    #chat-area::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-    .dark-mode #chat-area::-webkit-scrollbar-thumb {
-      background: #334155;
+    #chat-area::-webkit-scrollbar {
+      width: 6px;
     }
 
-    /* Dark mode scrollbar */
-    .dark-mode ::-webkit-scrollbar {
-      width: 8px;
+    #chat-area::-webkit-scrollbar-track {
+      background: transparent;
     }
 
-    .dark-mode ::-webkit-scrollbar-track {
-      background: #020617;
-    }
-
-    .dark-mode ::-webkit-scrollbar-thumb {
+    #chat-area::-webkit-scrollbar-thumb {
       background: #334155;
       border-radius: 10px;
     }
 
-    .dark-mode ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
-
     /* Messages */
-    .msg { display: flex; gap: 16px; max-width: 80%; opacity: 0; transform: translateY(10px); animation: fadeInMsg 0.4s forwards; }
-    @keyframes fadeInMsg { to { opacity: 1; transform: translateY(0); } }
+    .msg {
+      display: flex;
+      gap: 16px;
+      max-width: 80%;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeInMsg 0.4s forwards;
+    }
 
-    .msg.user { align-self: flex-end; flex-direction: row-reverse; }
-    
+    @keyframes fadeInMsg {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
     .msg-avatar {
-      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
     }
-    .bot .msg-avatar { background: var(--bg); color: var(--primary); border: 1px solid #e2e8f0; }
-    .user .msg-avatar { background: var(--primary); color: #fff; }
 
-    .msg-content { display: flex; flex-direction: column; gap: 4px; }
+    .bot .msg-avatar {
+      background: #1d2b40;
+      color: var(--primary-light);
+      border: 1px solid #3b4b64;
+    }
+
+    .user .msg-avatar {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .msg-content {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
     .msg-bubble {
-      padding: 16px 20px; font-size: 14.5px; line-height: 1.6;
-      border-radius: 20px; position: relative;
+      padding: 16px 20px;
+      font-size: 14.5px;
+      line-height: 1.6;
+      border-radius: 20px;
+      position: relative;
     }
-    .bot .msg-bubble { 
-      background: var(--bg); color: var(--text-main); 
+
+    .bot .msg-bubble {
+      background: #2a3a52;
+      color: #e2e8f0;
       border-top-left-radius: 4px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #41526d;
     }
-    .user .msg-bubble { 
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark)); 
-      color: #fff; border-top-right-radius: 4px;
+
+    .user .msg-bubble {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      border-top-right-radius: 4px;
       box-shadow: 0 4px 12px rgba(15, 118, 110, 0.15);
     }
 
     .msg.urgent .msg-bubble {
-      background: #fef2f2 !important; color: #dc2626 !important;
+      background: #fef2f2 !important;
+      color: #dc2626 !important;
       border: 1px solid #fee2e2 !important;
     }
 
-    /* ---- Markdown Rendering in Bot Messages ---- */
-    .bot .msg-bubble p { margin: 0 0 8px; }
-    .bot .msg-bubble p:last-child { margin-bottom: 0; }
-    .bot .msg-bubble ul,
-    .bot .msg-bubble ol { padding-left: 20px; margin: 6px 0; }
-    .bot .msg-bubble li { margin: 3px 0; line-height: 1.5; }
-    .bot .msg-bubble strong { font-weight: 700; }
-    .bot .msg-bubble em { font-style: italic; }
-    .bot .msg-bubble h1,
-    .bot .msg-bubble h2,
-    .bot .msg-bubble h3 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-weight: 700;
-      margin: 10px 0 4px;
-      line-height: 1.3;
-      color: var(--text-main);
-    }
-    .bot .msg-bubble h1 { font-size: 16px; }
-    .bot .msg-bubble h2 { font-size: 15px; }
-    .bot .msg-bubble h3 { font-size: 14px; }
-    .bot .msg-bubble code {
-      background: #e2e8f0;
-      padding: 2px 5px;
-      border-radius: 4px;
-      font-size: 12.5px;
-      font-family: monospace;
-    }
-    .bot .msg-bubble pre {
-      background: #1e293b;
-      color: #e2e8f0;
-      padding: 12px;
-      border-radius: 8px;
-      margin: 8px 0;
-      overflow-x: auto;
-    }
-    .bot .msg-bubble pre code {
-      background: transparent;
-      padding: 0;
-      font-size: 12px;
-    }
-    .bot .msg-bubble hr {
-      border: none;
-      border-top: 1px solid #e2e8f0;
-      margin: 10px 0;
-    }
-    .bot .msg-bubble blockquote {
-      border-left: 3px solid var(--primary-light);
-      padding-left: 12px;
-      margin: 8px 0;
-      color: var(--text-muted);
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px;
+      background: #2a3a52;
+      border-radius: 20px;
+      border: 1px solid #41526d;
+      width: fit-content;
     }
 
-    .typing-dots { display: flex; gap: 4px; padding: 12px 16px; background: var(--bg); border-radius: 20px; border: 1px solid #e2e8f0; width: fit-content; }
-    .dot { width: 6px; height: 6px; background: #94a3b8; border-radius: 50%; animation: dotBounce 1.4s infinite ease-in-out; }
-    .dot:nth-child(2) { animation-delay: 0.2s; }
-    .dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes dotBounce { 0%, 80%, 100% { transform: scale(1); } 40% { transform: scale(1.4); opacity: 0.5; } }
+    .dot {
+      width: 6px;
+      height: 6px;
+      background: #94a3b8;
+      border-radius: 50%;
+      animation: dotBounce 1.4s infinite ease-in-out;
+    }
+
+    .dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes dotBounce {
+
+      0%,
+      80%,
+      100% {
+        transform: scale(1);
+      }
+
+      40% {
+        transform: scale(1.4);
+        opacity: 0.5;
+      }
+    }
 
     /* Footer */
-    footer { padding: 24px 32px 32px; background: var(--chat-bg); position: relative; }
+    footer {
+      padding: 24px 32px 32px;
+      background: #172338;
+      position: relative;
+    }
+
     .input-wrapper {
-      display: flex; gap: 12px; background: var(--bg); border: 1.5px solid #e2e8f0;
-      border-radius: 16px; padding: 6px; transition: all 0.2s ease;
+      display: flex;
+      gap: 12px;
+      background: #324560;
+      border: 1.5px solid #4a5f7e;
+      border-radius: 16px;
+      padding: 6px;
+      transition: all 0.2s ease;
       box-shadow: var(--shadow-sm);
     }
-    .dark-mode .input-wrapper {
-      background: #020617;
-      border-color: #1e293b;
+
+    .input-wrapper:focus-within {
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.16);
     }
-    .input-wrapper:focus-within { border-color: var(--primary-light); box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.1); }
 
     #input {
-      flex: 1; border: none; background: transparent; padding: 12px 18px;
-      font-family: inherit; font-size: 15px; outline: none; color: var(--text-main);
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 12px 18px;
+      font-family: inherit;
+      font-size: 15px;
+      outline: none;
+      color: #e2e8f0;
     }
-    
+
     #send-btn {
-      width: 48px; height: 48px; border-radius: 12px; border: none;
-      background: var(--primary); color: #fff; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    #send-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2); background: var(--primary-dark); }
-    #send-btn:active:not(:disabled) { transform: scale(0.95); }
-    #send-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
 
-    .disclaimer { 
-      font-size: 11px; color: var(--text-muted); text-align: center; 
-      margin-top: 14px; font-weight: 500;
+    #send-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);
+      background: var(--primary-dark);
+    }
+
+    #send-btn:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+
+    #send-btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+    }
+
+    .disclaimer {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 14px;
+      font-weight: 500;
     }
 
     /* ---- Sidebar Section (Diagnostics) ---- */
@@ -303,113 +408,296 @@
       border-bottom: 1px solid #1e293b;
     }
 
-    .sidebar-header h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-main); }
-    .sidebar-header p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-
-    .sidebar-content { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
-    
-    .dark-mode .sidebar-content {
-      background: #020617;
+    .sidebar-header h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
     }
 
-    .dark-mode .sidebar-content::-webkit-scrollbar-track {
-      background: #020617;
+    .sidebar-header p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
     }
 
     .card {
-      background: var(--chat-bg); border: 1px solid rgba(226, 232, 240, 0.8);
-      border-radius: 20px; padding: 20px; box-shadow: var(--shadow-sm);
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
       transition: transform 0.2s ease;
     }
-    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
 
     .card-label {
-      font-size: 11px; font-weight: 700; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 0.1em;
-      margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .card-label svg { width: 14px; height: 14px; color: var(--primary); }
 
-    .badge-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .card-label svg {
+      width: 14px;
+      height: 14px;
+      color: var(--primary);
+    }
+
+    .badge-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
     .tag {
-      padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
       animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    
-    .tag-symptom { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
-    .tag-flag { background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
 
-    .condition-item { margin-bottom: 16px; }
-    .condition-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .condition-name { font-size: 13px; font-weight: 700; color: var(--text-main); }
-    .severity { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
-    .sev-low { background: #f0fdf4; color: #166534; }
-    .sev-medium { background: #fffbeb; color: #92400e; }
-    .sev-high { background: #fef2f2; color: #991b1b; }
+    @keyframes popIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
 
-    .progress-track { height: 6px; background: #f1f5f9; border-radius: 10px; overflow: hidden; position: relative; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-light)); border-radius: 10px; transition: width 0.8s cubic-bezier(0.65, 0, 0.35, 1); }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
 
-    .source-item { font-size: 12.5px; color: #475569; display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f1f5f9; line-height: 1.4; }
-    .source-item:last-child { border-bottom: none; }
-    .source-bullet { width: 6px; height: 6px; border-radius: 50%; background: var(--primary-light); margin-top: 6px; flex-shrink: 0; }
+    .tag-symptom {
+      background: #f0f9ff;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
 
-    .q-item { font-size: 13px; color: #475569; padding: 10px; background: var(--bg); border-radius: 10px; margin-bottom: 8px; border: 1px solid transparent; transition: all 0.2s; cursor: pointer; }
-    .q-item:hover { border-color: var(--primary-light); color: var(--primary); }
+    .tag-symptom.past {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
 
-    .empty-state { font-size: 12px; color: #94a3b8; font-style: italic; text-align: center; padding: 10px; }
+    .tag-symptom.negated {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fee2e2;
+      text-decoration: line-through;
+    }
+
+    .tag-flag {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fee2e2;
+    }
+
+    .condition-item {
+      margin-bottom: 16px;
+    }
+
+    .condition-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .condition-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .severity {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .sev-low {
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .sev-medium {
+      background: #fffbeb;
+      color: #92400e;
+    }
+
+    .sev-high {
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .progress-track {
+      height: 6px;
+      background: #f1f5f9;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      border-radius: 10px;
+      transition: width 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+    }
+
+    .source-item {
+      font-size: 12.5px;
+      color: #475569;
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
+      line-height: 1.4;
+    }
+
+    .source-item:last-child {
+      border-bottom: none;
+    }
+
+    .source-bullet {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+
+    .q-item {
+      font-size: 13px;
+      color: #475569;
+      padding: 10px;
+      background: var(--bg);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .q-item:hover {
+      border-color: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .empty-state {
+      font-size: 12px;
+      color: #94a3b8;
+      font-style: italic;
+      text-align: center;
+      padding: 10px;
+    }
 
     /* Traversal path */
     .traversal-step {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 11.5px; color: #475569;
-      padding: 6px 8px; background: #f8fafc;
-      border-radius: 8px; margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: #475569;
+      padding: 6px 8px;
+      background: #f8fafc;
+      border-radius: 8px;
+      margin-bottom: 5px;
       border-left: 3px solid var(--primary-light);
       animation: popIn 0.25s ease both;
     }
-    .traversal-step .ts-from { color: #3b82f6; font-weight: 700; }
-    .traversal-step .ts-arrow { color: #94a3b8; }
-    .traversal-step .ts-to   { color: #0d9488; font-weight: 700; }
-    .traversal-step .ts-weight { color: #94a3b8; font-size: 10px; margin-left: auto; }
-    .traversal-header { font-size: 11px; color: #64748b; margin-bottom: 8px; }
+
+    .traversal-step .ts-from {
+      color: #3b82f6;
+      font-weight: 700;
+    }
+
+    .traversal-step .ts-arrow {
+      color: #94a3b8;
+    }
+
+    .traversal-step .ts-to {
+      color: #0d9488;
+      font-weight: 700;
+    }
+
+    .traversal-step .ts-weight {
+      color: #94a3b8;
+      font-size: 10px;
+      margin-left: auto;
+    }
+
+    .traversal-header {
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
 
     /* ---- Tab Switcher ---- */
     .tab-bar {
-      display: flex; gap: 4px;
-      background: var(--bg);
+      display: flex;
+      gap: 4px;
+      background: rgba(241, 245, 249, 0.8);
       border-radius: 10px;
       padding: 4px;
       margin-top: 12px;
     }
-    .dark-mode .tab-bar {
-      background: #020617;
-    }
+
     .tab-btn {
-      flex: 1; padding: 7px 10px;
-      border: none; background: transparent;
-      border-radius: 7px; cursor: pointer;
-      font-size: 11px; font-weight: 700;
+      flex: 1;
+      padding: 7px 10px;
+      border: none;
+      background: transparent;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
       color: var(--text-muted);
       transition: all 0.2s ease;
       font-family: 'Inter', sans-serif;
       letter-spacing: 0.03em;
       text-transform: uppercase;
     }
+
     .tab-btn.active {
       background: var(--chat-bg);
       color: var(--primary);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     }
 
-    .dark-mode .tab-btn.active {
-      background: #1e293b;
-      color: #14b8a6;
+    .tab-panel {
+      display: none;
     }
 
-    .tab-panel { display: none; }
-    .tab-panel.active { display: flex; flex-direction: column; flex: 1; }
+    .tab-panel.active {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
 
     /* ---- Knowledge Graph Panel ---- */
     #graph-panel {
@@ -417,11 +705,12 @@
       position: relative;
       overflow: hidden;
       background: radial-gradient(ellipse at 50% 40%, #f0fdfa 0%, #f8fafc 100%);
+    }
 
     #graph-svg {
-  width: 800px; 
-  height: 600px;
-}
+      width: 800px;
+      height: 600px;
+    }
 
 
     /* Nodes */
@@ -429,22 +718,32 @@
       cursor: pointer;
       transition: filter 0.3s ease;
     }
-    .g-node.dim circle { opacity: 0.18; }
-    .g-node.dim text { opacity: 0.18; }
+
+    .g-node.dim circle {
+      opacity: 0.18;
+    }
+
+    .g-node.dim text {
+      opacity: 0.18;
+    }
+
     .g-node.highlighted circle {
       filter: drop-shadow(0 0 8px currentColor);
       stroke-width: 3;
     }
+
     .g-node.active-symptom circle {
       filter: drop-shadow(0 0 12px #3b82f6);
       stroke: #3b82f6 !important;
       stroke-width: 3;
     }
+
     .g-node.active-condition circle {
       filter: drop-shadow(0 0 12px #14b8a6);
       stroke: #14b8a6 !important;
       stroke-width: 3;
     }
+
     .g-node text {
       pointer-events: none;
       font-family: 'Inter', sans-serif;
@@ -455,7 +754,11 @@
       stroke-opacity: 0.5;
       transition: stroke-opacity 0.3s ease;
     }
-    .g-link.dim { stroke-opacity: 0.05; }
+
+    .g-link.dim {
+      stroke-opacity: 0.05;
+    }
+
     .g-link.active-link {
       stroke-opacity: 0.9;
       stroke-width: 2.5;
@@ -464,7 +767,7 @@
     /* Tooltip */
     #graph-tooltip {
       position: absolute;
-      background: rgba(15,23,42,0.92);
+      background: rgba(15, 23, 42, 0.92);
       color: #f8fafc;
       padding: 10px 14px;
       border-radius: 12px;
@@ -476,541 +779,632 @@
       max-width: 200px;
       z-index: 50;
       backdrop-filter: blur(8px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     }
-    #graph-tooltip.visible { opacity: 1; }
-    #graph-tooltip strong { color: #5eead4; display: block; margin-bottom: 2px; }
+
+    #graph-tooltip.visible {
+      opacity: 1;
+    }
+
+    #graph-tooltip strong {
+      color: #5eead4;
+      display: block;
+      margin-bottom: 2px;
+    }
 
     /* Legend */
     #graph-legend {
       position: absolute;
-      bottom: 12px; left: 12px;
-      display: flex; flex-direction: column; gap: 5px;
+      bottom: 12px;
+      left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
       pointer-events: none;
     }
-    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: #64748b; font-weight: 600; }
-    .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
 
     /* Build counter */
     #graph-stats {
       position: absolute;
-      top: 12px; right: 12px;
-      font-size: 10px; font-weight: 700;
+      top: 12px;
+      right: 12px;
+      font-size: 10px;
+      font-weight: 700;
       color: var(--text-muted);
-      background: rgba(255,255,255,0.8);
-      padding: 4px 8px; border-radius: 6px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 4px 8px;
+      border-radius: 6px;
       backdrop-filter: blur(4px);
     }
 
     /* Mobile handling */
     @media (max-width: 1024px) {
-      #sidebar { display: none; }
-      #root { width: 100vw; height: 100vh; border-radius: 0; }
+      #sidebar {
+        display: none;
+      }
+
+      #root {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+      }
     }
   </style>
 </head>
+
 <body>
 
-<div id="root">
-  <!-- Left: Chat Section -->
-  <section id="chat-section">
-    <header>
-      <div class="brand">
-        <div class="brand-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-          </svg>
+  <div id="root">
+    <!-- Left: Chat Section -->
+    <section id="chat-section">
+      <header>
+        <div class="brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>SymptomAssist</h1>
+            <p>Cognitive Health Advisor</p>
+          </div>
         </div>
-        <div class="brand-text">
-          <h1>SymptomAssist</h1>
-          <p>Cognitive Health Advisor</p>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button id="new-chat-btn"
+            style="background: rgba(15, 118, 110, 0.1); color: var(--primary); border: 1px solid rgba(15, 118, 110, 0.2); padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+            NEW CHAT
+          </button>
+          <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>Live Analysis</span>
+          </div>
         </div>
-      </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-      <!-- 🌙 Theme Toggle -->
-      <button id="theme-toggle" style="background: #e2e8f0; border: none; padding: 8px 12px; border-radius: 10px; cursor: pointer;">
-        🌙
-      </button>
+      </header>
 
-      <!-- New Chat Button -->
-      <button id="new-chat-btn" style="background: rgba(15, 118, 110, 0.1); color: var(--primary); border: 1px solid rgba(15, 118, 110, 0.2); padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-        NEW CHAT
-      </button>
-        <div class="status-indicator">
-          <div class="status-dot"></div>
-          <span>Live Analysis</span>
+      <div id="chat-area"></div>
+
+      <footer>
+        <div class="input-wrapper">
+          <input id="input" type="text" placeholder="Describe how you're feeling today..." autocomplete="off" />
+          <button id="send-btn" disabled aria-label="Send message">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
         </div>
-      </div>
-    </header>
+        <p class="disclaimer">Not a substitute for professional medical advice. If you have an emergency, call 108 (or
+          your local emergency number).</p>
+      </footer>
+    </section>
 
-    <div id="chat-area"></div>
-
-    <footer>
-      <div class="input-wrapper">
-        <input id="input" type="text" placeholder="Describe how you're feeling today..." autocomplete="off"/>
-        <button id="send-btn" disabled aria-label="Send message">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
-      </div>
-      <p class="disclaimer">Not a substitute for professional medical advice. If you have an emergency, call 108 (or your local emergency number).</p>
-    </footer>
-  </section>
-
-  <!-- Right: Diagnostics Sidebar -->
-  <aside id="sidebar">
-    <div class="sidebar-header">
-      <h2>Diagnostics Panel</h2>
-      <p>Multi-modal Reasoning Output</p>
-      <div class="tab-bar">
-        <button class="tab-btn active" id="tab-diag" onclick="switchTab('diag')">Diagnostics</button>
-        <button class="tab-btn" id="tab-graph" onclick="switchTab('graph')">Knowledge Graph</button>
-      </div>
-    </div>
-
-    <!-- TAB 1: Diagnostics -->
-    <div id="panel-diag" class="tab-panel active sidebar-content">
-      <!-- Symptoms Card -->
-      <div class="card" id="card-symptoms">
-        <div class="card-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          Extracted Symptoms
-        </div>
-        <div id="symp-list" class="badge-grid">
-          <div class="empty-state">Waiting for patient description...</div>
+    <!-- Right: Diagnostics Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <h2>Diagnostics Panel</h2>
+        <p>Multi-modal Reasoning Output</p>
+        <div class="tab-bar">
+          <button class="tab-btn active" id="tab-diag" onclick="switchTab('diag')">Diagnostics</button>
+          <button class="tab-btn" id="tab-graph" onclick="switchTab('graph')">Knowledge Graph</button>
         </div>
       </div>
 
-      <!-- Conditions Card -->
-      <div class="card" id="card-conditions">
-        <div class="card-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-          Traversal Matches
+      <!-- TAB 1: Diagnostics -->
+      <div id="panel-diag" class="tab-panel active sidebar-content">
+        <!-- Symptoms Card -->
+        <div class="card" id="card-symptoms">
+          <div class="card-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            Extracted Symptoms
+          </div>
+          <div id="symp-list" class="badge-grid">
+            <div class="empty-state">Please type your symptoms in the chat below...</div>
+          </div>
         </div>
-        <div id="cond-list">
-          <div class="empty-state">Awaiting traversal...</div>
+
+        <!-- Conditions Card -->
+        <div class="card" id="card-conditions">
+          <div class="card-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+              <line x1="12" y1="22.08" x2="12" y2="12" />
+            </svg>
+            Traversal Matches
+          </div>
+          <div id="cond-list">
+            <div class="empty-state">Matches will appear here...</div>
+          </div>
+        </div>
+
+        <!-- RAG Card -->
+        <div class="card" id="card-rag">
+          <div class="card-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+            Medical Context (RAG)
+          </div>
+          <div id="rag-list">
+            <div class="empty-state">No documents retrieved</div>
+          </div>
+        </div>
+
+        <!-- Follow-ups Card -->
+        <div class="card" id="card-followups">
+          <div class="card-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            Reasoning Tree
+          </div>
+          <div id="fu-list">
+            <div class="empty-state">Awaiting turns...</div>
+          </div>
+        </div>
+
+        <!-- Traversal Path Card -->
+        <div class="card" id="card-traversal">
+          <div class="card-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+            BFS Traversal Path
+          </div>
+          <div id="trav-list">
+            <div class="empty-state">Graph not yet traversed</div>
+          </div>
+        </div>
+
+        <!-- Red Flags Card -->
+        <div class="card" id="card-redflags" style="display:none; border-color: #fee2e2; background: #fefce8">
+          <div class="card-label" style="color: #dc2626">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            Priority Red Flags
+          </div>
+          <div id="rf-list" class="badge-grid"></div>
         </div>
       </div>
 
-      <!-- RAG Card -->
-      <div class="card" id="card-rag">
-        <div class="card-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          Medical Context (RAG)
-        </div>
-        <div id="rag-list">
-          <div class="empty-state">No documents retrieved</div>
-        </div>
-      </div>
-
-      <!-- Follow-ups Card -->
-      <div class="card" id="card-followups">
-        <div class="card-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Reasoning Tree
-        </div>
-        <div id="fu-list">
-          <div class="empty-state">Awaiting turns...</div>
-        </div>
-      </div>
-
-      <!-- Traversal Path Card -->
-      <div class="card" id="card-traversal">
-        <div class="card-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          BFS Traversal Path
-        </div>
-        <div id="trav-list">
-          <div class="empty-state">Graph not yet traversed</div>
+      <!-- TAB 2: Traversal Graph -->
+      <div id="panel-graph" class="tab-panel" style="flex:1;position:relative;overflow:hidden;background:#f8fafc;">
+        <div id="graph-panel" style="width:100%;height:100%;overflow:hidden;position:relative;">
+          <svg id="graph-svg" width="800" height="600" viewBox="0 0 800 600"></svg>
+          <div id="graph-empty-hint"
+            style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 8v4l3 3" />
+            </svg>
+            <p style="color:#94a3b8;font-size:13px;margin-top:12px;text-align:center;line-height:1.6;">Graph builds as
+              you chat.<br />Send a symptom description to begin traversal.</p>
+          </div>
+          <div id="graph-legend" style="bottom:10px;">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#3b82f6"></div>Symptom (input)
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#0d9488"></div>Condition (output)
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#f59e0b;width:30px;height:3px;border-radius:1px;"></div>
+              Traversal edge
+            </div>
+          </div>
+          <div id="graph-stats" style="top:10px;bottom:auto;">Traversal Graph — awaiting input</div>
         </div>
       </div>
+    </aside>
+  </div>
 
-      <!-- Red Flags Card -->
-      <div class="card" id="card-redflags" style="display:none; border-color: #fee2e2; background: #fefce8">
-        <div class="card-label" style="color: #dc2626">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          Priority Red Flags
-        </div>
-        <div id="rf-list" class="badge-grid"></div>
-      </div>
-    </div>
-
-    <!-- TAB 2: Traversal Graph -->
-    <div id="panel-graph" class="tab-panel" style="flex:1;position:relative;overflow:hidden;background:#f8fafc;">
-      <div id="graph-panel" style="width:100%;height:100%;overflow:hidden;position:relative;">
-       <svg id="graph-svg" width="800" height="600" viewBox="0 0 800 600"></svg>
-        <div id="graph-empty-hint" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
-          <p style="color:#94a3b8;font-size:13px;margin-top:12px;text-align:center;line-height:1.6;">Graph builds as you chat.<br/>Send a symptom description to begin traversal.</p>
-        </div>
-        <div id="graph-legend" style="bottom:10px;">
-          <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Symptom (input)</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#0d9488"></div>Condition (output)</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;width:30px;height:3px;border-radius:1px;"></div>Traversal edge</div>
-        </div>
-        <div id="graph-stats" style="top:10px;bottom:auto;">Traversal Graph — awaiting input</div>
-      </div>
-    </div>
-  </aside>
-</div>
-
-<script>
-  // ============================================================
-  // Tab Switcher
-  // ============================================================
-  function switchTab(tab) {
-    document.getElementById('panel-diag').classList.toggle('active', tab === 'diag');
-    document.getElementById('panel-graph').classList.toggle('active', tab === 'graph');
-    document.getElementById('tab-diag').classList.toggle('active', tab === 'diag');
-    document.getElementById('tab-graph').classList.toggle('active', tab === 'graph');
-  }
-
-  // ============================================================
-  // PRE-DEFINED FULL KNOWLEDGE GRAPH (Force Simulation)
-  // ============================================================
-  
-  const GRAPH = {
-    nodes: [],
-    edges: [],
-    nodeMap: {},
-    svg: null,
-    gRoot: null,
-    linkEls: null,
-    nodeEls: null,
-    labelEls: null,
-    simulation: null,
-    initialized: false
-  };
-
-  const THEME = {
-    bg: '#0f172a',
-    dimmed: 'rgba(100, 116, 139, 0.25)',
-    dimmedNode: '#334155',
-    activeSymp: '#3b82f6',
-    activeCond: '#10b981',
-    topCond: '#ef4444',
-    edge: '#f59e0b'
-  };
-
-  async function loadFullGraph() {
-    try {
-      const res = await fetch('/graph-data');
-      const data = await res.json();
-      GRAPH.nodes = data.nodes;
-      GRAPH.edges = data.edges;
-      GRAPH.nodes.forEach(n => GRAPH.nodeMap[n.id] = n);
-      initD3Graph();
-      GRAPH.initialized = true;
-    } catch (e) {
-      console.error("Failed to load full graph", e);
+  <script>
+    // ============================================================
+    // Tab Switcher
+    // ============================================================
+    function switchTab(tab) {
+      document.getElementById('panel-diag').classList.toggle('active', tab === 'diag');
+      document.getElementById('panel-graph').classList.toggle('active', tab === 'graph');
+      document.getElementById('tab-diag').classList.toggle('active', tab === 'diag');
+      document.getElementById('tab-graph').classList.toggle('active', tab === 'graph');
     }
-  }
 
-  function initD3Graph() {
-    const panel = document.getElementById('graph-panel');
-    const W = panel.clientWidth || 560;
-    const H = panel.clientHeight || 600;
+    // ============================================================
+    // PRE-DEFINED FULL KNOWLEDGE GRAPH (Force Simulation)
+    // ============================================================
 
-    const existing = document.getElementById('graph-svg');
-    if (existing) existing.innerHTML = '';
+    const GRAPH = {
+      nodes: [],
+      edges: [],
+      nodeMap: {},
+      svg: null,
+      gRoot: null,
+      linkEls: null,
+      nodeEls: null,
+      labelEls: null,
+      simulation: null,
+      initialized: false
+    };
 
-    const svg = d3.select('#graph-svg')
-  .attr('width', 800)
-  .attr('height', 600)
-  .attr('viewBox', '0 0 800 600')
-  .style('background', THEME.bg)
-  .style('font-family', "'Inter', 'Roboto', sans-serif");
+    const THEME = {
+      bg: '#0f172a',
+      dimmed: 'rgba(100, 116, 139, 0.25)',
+      dimmedNode: '#334155',
+      activeSymp: '#3b82f6',
+      activeCond: '#10b981',
+      topCond: '#ef4444',
+      edge: '#f59e0b'
+    };
+
+    let API_BASE = '';
+    const API_BASE_CANDIDATES = [
+      '',
+      'http://127.0.0.1:8000',
+      'http://localhost:8000',
+    ];
+    async function resolveApiBase() {
+      const pageIsHttps = window.location.protocol === 'https:';
+      for (const base of API_BASE_CANDIDATES) {
+        // Browsers block https page -> http API calls (mixed content).
+        if (pageIsHttps && base.startsWith('http://')) {
+          continue;
+        }
+        try {
+          const res = await fetch(`${base}/graph-data`);
+          if (res.ok) {
+            API_BASE = base;
+            return API_BASE;
+          }
+        } catch (_) {
+          // Keep trying next candidate.
+        }
+      }
+      API_BASE = 'http://127.0.0.1:8000';
+      return API_BASE;
+    }
+
+    async function loadFullGraph() {
+      try {
+        if (!API_BASE) await resolveApiBase();
+        const res = await fetch(`${API_BASE}/graph-data`);
+        const data = await res.json();
+        GRAPH.nodes = data.nodes;
+        GRAPH.edges = data.edges;
+        GRAPH.nodes.forEach(n => GRAPH.nodeMap[n.id] = n);
+        initD3Graph();
+        GRAPH.initialized = true;
+      } catch (e) {
+        console.error("Failed to load full graph", e);
+      }
+    }
+
+    function initD3Graph() {
+      const panel = document.getElementById('graph-panel');
+      const W = panel.clientWidth || 560;
+      const H = panel.clientHeight || 600;
+
+      const existing = document.getElementById('graph-svg');
+      if (existing) existing.innerHTML = '';
+
+      const svg = d3.select('#graph-svg')
+        .attr('width', 800)
+        .attr('height', 600)
+        .attr('viewBox', '0 0 800 600')
+        .style('background', THEME.bg)
+        .style('font-family', "'Inter', 'Roboto', sans-serif");
 
 
-    GRAPH.svg = svg;
-    const g = svg.append('g').attr('class', 'graph-root');
-    GRAPH.gRoot = g;
+      GRAPH.svg = svg;
+      const g = svg.append('g').attr('class', 'graph-root');
+      GRAPH.gRoot = g;
 
-    svg.call(d3.zoom()
-      .scaleExtent([0.1, 4])
-      .on('zoom', ev => g.attr('transform', ev.transform))
-    );
+      svg.call(d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on('zoom', ev => g.attr('transform', ev.transform))
+      );
 
-    // Forces: Greatly spaced out to prevent overlapping
-    GRAPH.simulation = d3.forceSimulation(GRAPH.nodes)
-      .force('link', d3.forceLink(GRAPH.edges).id(d => d.id).distance(60))
-      .force('charge', d3.forceManyBody().strength(-280))
-      .force('x', d3.forceX(W / 2).strength(0.04))
-      .force('y', d3.forceY(d => d.type === 'condition' ? H - 150 : 150).strength(0.6))
-      .force('collide', d3.forceCollide().radius(22));
+      // Forces: Greatly spaced out to prevent overlapping
+      GRAPH.simulation = d3.forceSimulation(GRAPH.nodes)
+        .force('link', d3.forceLink(GRAPH.edges).id(d => d.id).distance(60))
+        .force('charge', d3.forceManyBody().strength(-280))
+        .force('x', d3.forceX(W / 2).strength(0.04))
+        .force('y', d3.forceY(d => d.type === 'condition' ? H - 150 : 150).strength(0.6))
+        .force('collide', d3.forceCollide().radius(22));
 
-    // Edges
-    GRAPH.linkEls = g.append('g')
-      .selectAll('line')
-      .data(GRAPH.edges)
-      .join('line')
-      .attr('stroke', THEME.dimmed)
-      .attr('stroke-width', 1)
-      .style('opacity', 0.5);
+      // Edges
+      GRAPH.linkEls = g.append('g')
+        .selectAll('line')
+        .data(GRAPH.edges)
+        .join('line')
+        .attr('stroke', THEME.dimmed)
+        .attr('stroke-width', 1)
+        .style('opacity', 0.5);
 
-    // Dynamic sequential path edges
-    GRAPH.dynamicLinkEls = g.append('g')
-      .attr('class', 'dyn-edges')
-      .selectAll('line');
+      // Dynamic sequential path edges
+      GRAPH.dynamicLinkEls = g.append('g')
+        .attr('class', 'dyn-edges')
+        .selectAll('line');
 
-    // Nodes
-    GRAPH.nodeEls = g.append('g')
-      .selectAll('circle')
-      .data(GRAPH.nodes)
-      .join('circle')
-      .attr('r', d => d.type === 'condition' ? 6 : 4)
-      .attr('fill', THEME.dimmedNode)
-      .attr('stroke', '#020617')
-      .attr('stroke-width', 1)
-      .call(drag(GRAPH.simulation));
+      // Nodes
+      GRAPH.nodeEls = g.append('g')
+        .selectAll('circle')
+        .data(GRAPH.nodes)
+        .join('circle')
+        .attr('r', d => d.type === 'condition' ? 6 : 4)
+        .attr('fill', THEME.dimmedNode)
+        .attr('stroke', '#020617')
+        .attr('stroke-width', 1)
+        .call(drag(GRAPH.simulation));
 
-    // Labels: Show all distinctly, better spacing
-    GRAPH.labelEls = g.append('g')
-      .selectAll('text')
-      .data(GRAPH.nodes)
-      .join('text')
-      .text(d => d.id.replace(/_/g, ' '))
-      .attr('font-size', '8px')
-      .attr('fill', '#94a3b8')
-      .attr('opacity', 0.7)
-      .attr('dx', 10)
-      .attr('dy', 3)
-      .style('pointer-events', 'none')
-      .style('text-shadow', '1px 1px 2px #020617');
+      // Labels: Show all distinctly, better spacing
+      GRAPH.labelEls = g.append('g')
+        .selectAll('text')
+        .data(GRAPH.nodes)
+        .join('text')
+        .text(d => d.id.replace(/_/g, ' '))
+        .attr('font-size', '8px')
+        .attr('fill', '#94a3b8')
+        .attr('opacity', 0.7)
+        .attr('dx', 10)
+        .attr('dy', 3)
+        .style('pointer-events', 'none')
+        .style('text-shadow', '1px 1px 2px #020617');
 
-    GRAPH.simulation.on('tick', () => {
-      GRAPH.linkEls
-        .attr('x1', d => d.source.x)
-        .attr('y1', d => d.source.y)
-        .attr('x2', d => d.target.x)
-        .attr('y2', d => d.target.y);
-
-      if (GRAPH.dynamicLinkEls) {
-        GRAPH.dynamicLinkEls
+      GRAPH.simulation.on('tick', () => {
+        GRAPH.linkEls
           .attr('x1', d => d.source.x)
           .attr('y1', d => d.source.y)
           .attr('x2', d => d.target.x)
           .attr('y2', d => d.target.y);
-      }
 
-      GRAPH.nodeEls
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y);
+        if (GRAPH.dynamicLinkEls) {
+          GRAPH.dynamicLinkEls
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
+        }
 
-      GRAPH.labelEls
-        .attr('x', d => d.x)
-        .attr('y', d => d.y);
-    });
+        GRAPH.nodeEls
+          .attr('cx', d => d.x)
+          .attr('cy', d => d.y);
 
-    function drag(sim) {
-      return d3.drag()
-        .on('start', ev => {
-          if (!ev.active) sim.alphaTarget(0.3).restart();
-          ev.subject.fx = ev.subject.x;
-          ev.subject.fy = ev.subject.y;
-        })
-        .on('drag', ev => {
-          ev.subject.fx = ev.x;
-          ev.subject.fy = ev.y;
-        })
-        .on('end', ev => {
-          if (!ev.active) sim.alphaTarget(0);
-          ev.subject.fx = null;
-          ev.subject.fy = null;
-        });
-    }
-  }
-
-  function normalizeGraphId(text) {
-    return (text || '').toString().trim().toLowerCase().replace(/\s+/g, '_');
-  }
-
-  function resolveGraphNodeId(item) {
-    if (!item) return null;
-
-    const rawValues = [];
-    if (typeof item === 'string') {
-      rawValues.push(item);
-    } else {
-      if (item.condition_id) rawValues.push(item.condition_id);
-      if (item.display) rawValues.push(item.display);
-      if (item.id) rawValues.push(item.id);
-    }
-
-    for (const raw of rawValues) {
-      const base = (raw || '').toString().trim().toLowerCase();
-      if (!base) continue;
-
-      const candidates = [
-        base,
-        base.replace(/\s+/g, '_'),
-        base.replace(/_/g, ' '),
-        base.replace(/[^a-z0-9_\s]/g, '').replace(/\s+/g, '_')
-      ];
-
-      for (const id of candidates) {
-        if (GRAPH.nodeMap[id]) return id;
-      }
-    }
-
-    return rawValues.length > 0 ? normalizeGraphId(rawValues[0]) : null;
-  }
-
-  function resolveGraphNode(item) {
-    const id = resolveGraphNodeId(item);
-    return id ? GRAPH.nodeMap[id] || null : null;
-  }
-
-  function highlightGraph(symptoms, conditions, journeyEdges) {
-    if (!GRAPH.initialized) return;
-
-    const hint = document.getElementById('graph-empty-hint');
-    if (hint) hint.style.display = 'none';
-
-    const activeSymptoms = new Set((symptoms || []).map(resolveGraphNodeId).filter(Boolean));
-    const activeConditions = new Set((conditions || []).map(resolveGraphNodeId).filter(Boolean));
-    const topCondId = conditions && conditions.length > 0 ? resolveGraphNodeId(conditions[0]) : null;
-
-    // Render dynamic path strictly from backend-provided journey edges.
-    const dynamicEdges = [];
-    for (const edge of (journeyEdges || [])) {
-      const fromNode = resolveGraphNode(edge.from);
-      const toNode = resolveGraphNode(edge.to);
-      if (fromNode && toNode) {
-        dynamicEdges.push({
-          source: fromNode,
-          target: toNode,
-          edge_type: edge.edge_type,
-          score: edge.score
-        });
-      }
-    }
-
-    // Draw dynamic journey connections over existing graph.
-    GRAPH.dynamicLinkEls = GRAPH.gRoot.select('.dyn-edges')
-      .selectAll('line')
-      .data(dynamicEdges, (_, i) => i)
-      .join('line')
-      .attr('stroke', d => {
-        if (d.edge_type === 'FIRST_SYMPTOM_TO_CONDITION') return '#ea580c';
-        if (d.edge_type === 'SEQUENTIAL_SYMPTOM') return '#fb923c';
-        return THEME.edge;
-      })
-      .attr('stroke-width', d => {
-        if (d.edge_type === 'FIRST_SYMPTOM_TO_CONDITION') return 5.5;
-        if (d.edge_type === 'SEQUENTIAL_SYMPTOM') return 4;
-        return 2.5;
-      })
-      .attr('marker-end', 'url(#timeline-arrow)')
-      .style('pointer-events', 'none');
-
-    // Update nodes styling
-    GRAPH.nodeEls
-      .transition().duration(500)
-      .attr('fill', d => {
-        if (d.id === topCondId) return THEME.topCond;
-        if (activeConditions.has(d.id)) return THEME.activeCond;
-        if (activeSymptoms.has(d.id)) return THEME.activeSymp;
-        return THEME.dimmedNode;
-      })
-      .attr('r', d => {
-        if (d.id === topCondId) return 12;
-        if (activeConditions.has(d.id) || activeSymptoms.has(d.id)) return 8;
-        return d.type === 'condition' ? 7 : 5;
+        GRAPH.labelEls
+          .attr('x', d => d.x)
+          .attr('y', d => d.y);
       });
 
-    // Update labels
-    GRAPH.labelEls
-      .transition().duration(500)
-      .attr('fill', d => {
-        if (activeConditions.has(d.id) || activeSymptoms.has(d.id)) return '#f8fafc';
-        return '#94a3b8';
-      })
-      .attr('opacity', d => {
-        return (activeConditions.has(d.id) || activeSymptoms.has(d.id)) ? 1.0 : 0.7;
-      })
-      .attr('font-size', d => {
-        if (d.id === topCondId) return '14px';
-        if (activeConditions.has(d.id) || activeSymptoms.has(d.id)) return '11px';
-        return '8px';
-      })
-      .style('font-weight', d => (activeConditions.has(d.id) || activeSymptoms.has(d.id)) ? '700' : '400');
-
-    // Dim the static base edges to emphasize the generated pathway
-    GRAPH.linkEls
-      .transition().duration(500)
-      .attr('stroke', THEME.dimmed)
-      .attr('stroke-width', 1)
-      .style('opacity', 0.3);
-
-    // Update stats
-    const hlNodes = activeSymptoms.size + activeConditions.size;
-    document.getElementById('graph-stats').textContent =
-      `Structured Global Graph · ${hlNodes} active nodes · ${dynamicEdges.length} active connections`;
-  }
-
-
-
-
-  const chatArea = document.getElementById('chat-area');
-  const inputEl  = document.getElementById('input');
-  const sendBtn  = document.getElementById('send-btn');
-  const newChatBtn = document.getElementById('new-chat-btn');
-
-  let history = [];
-  let allSymptoms = [];
-  let sessionId = null;   // server-assigned session ID
-  let isLoading = false;
-
-  newChatBtn.addEventListener('click', () => {
-    if (confirm('Start a new session? Current conversation will be cleared.')) {
-      clearChat();
+      function drag(sim) {
+        return d3.drag()
+          .on('start', ev => {
+            if (!ev.active) sim.alphaTarget(0.3).restart();
+            ev.subject.fx = ev.subject.x;
+            ev.subject.fy = ev.subject.y;
+          })
+          .on('drag', ev => {
+            ev.subject.fx = ev.x;
+            ev.subject.fy = ev.y;
+          })
+          .on('end', ev => {
+            if (!ev.active) sim.alphaTarget(0);
+            ev.subject.fx = null;
+            ev.subject.fy = null;
+          });
+      }
     }
-  });
 
-  inputEl.addEventListener('input', () => {
-    sendBtn.disabled = inputEl.value.trim() === '' || isLoading;
-  });
-  inputEl.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-  });
-  sendBtn.addEventListener('click', sendMessage);
+    function normalizeGraphId(text) {
+      return (text || '').toString().trim().toLowerCase().replace(/\s+/g, '_');
+    }
 
-  function addMessage(role, text) {
-    const isUrgent = text.toUpperCase().includes('URGENT:');
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `msg ${role}${isUrgent ? ' urgent' : ''}`;
-    
-    const avatar = document.createElement('div');
-    avatar.className = 'msg-avatar';
-    avatar.textContent = role === 'bot' ? 'AI' : 'ME';
-    
-    const content = document.createElement('div');
-    content.className = 'msg-content';
-    
-    const bubble = document.createElement('div');
-    bubble.className = 'msg-bubble';
+    function resolveGraphNodeId(item) {
+      if (!item) return null;
 
-    if (role === 'bot') {
-      bubble.innerHTML = DOMPurify.sanitize(marked.parse(text));
-    } else {
+      const rawValues = [];
+      if (typeof item === 'string') {
+        rawValues.push(item);
+      } else {
+        if (item.condition_id) rawValues.push(item.condition_id);
+        if (item.display) rawValues.push(item.display);
+        if (item.id) rawValues.push(item.id);
+      }
+
+      for (const raw of rawValues) {
+        const base = (raw || '').toString().trim().toLowerCase();
+        if (!base) continue;
+
+        const candidates = [
+          base,
+          base.replace(/\s+/g, '_'),
+          base.replace(/_/g, ' '),
+          base.replace(/[^a-z0-9_\s]/g, '').replace(/\s+/g, '_')
+        ];
+
+        for (const id of candidates) {
+          if (GRAPH.nodeMap[id]) return id;
+        }
+      }
+
+      return rawValues.length > 0 ? normalizeGraphId(rawValues[0]) : null;
+    }
+
+    function resolveGraphNode(item) {
+      const id = resolveGraphNodeId(item);
+      return id ? GRAPH.nodeMap[id] || null : null;
+    }
+
+    function highlightGraph(symptoms, conditions, journeyEdges) {
+      if (!GRAPH.initialized) return;
+
+      const hint = document.getElementById('graph-empty-hint');
+      if (hint) hint.style.display = 'none';
+
+      const activeSymptoms = new Set((symptoms || []).map(resolveGraphNodeId).filter(Boolean));
+      const activeConditions = new Set((conditions || []).map(resolveGraphNodeId).filter(Boolean));
+      const topCondId = conditions && conditions.length > 0 ? resolveGraphNodeId(conditions[0]) : null;
+
+      // Render dynamic path strictly from backend-provided journey edges.
+      const dynamicEdges = [];
+      for (const edge of (journeyEdges || [])) {
+        const fromNode = resolveGraphNode(edge.from);
+        const toNode = resolveGraphNode(edge.to);
+        if (fromNode && toNode) {
+          dynamicEdges.push({
+            source: fromNode,
+            target: toNode,
+            edge_type: edge.edge_type,
+            score: edge.score
+          });
+        }
+      }
+
+      // Draw dynamic journey connections over existing graph.
+      GRAPH.dynamicLinkEls = GRAPH.gRoot.select('.dyn-edges')
+        .selectAll('line')
+        .data(dynamicEdges, (_, i) => i)
+        .join('line')
+        .attr('stroke', d => {
+          if (d.edge_type === 'FIRST_SYMPTOM_TO_CONDITION') return '#ea580c';
+          if (d.edge_type === 'SEQUENTIAL_SYMPTOM') return '#fb923c';
+          return THEME.edge;
+        })
+        .attr('stroke-width', d => {
+          if (d.edge_type === 'FIRST_SYMPTOM_TO_CONDITION') return 5.5;
+          if (d.edge_type === 'SEQUENTIAL_SYMPTOM') return 4;
+          return 2.5;
+        })
+        .attr('marker-end', 'url(#timeline-arrow)')
+        .style('pointer-events', 'none');
+
+      // Update nodes styling
+      GRAPH.nodeEls
+        .transition().duration(500)
+        .attr('fill', d => {
+          if (d.id === topCondId) return THEME.topCond;
+          if (activeConditions.has(d.id)) return THEME.activeCond;
+          if (activeSymptoms.has(d.id)) return THEME.activeSymp;
+          return THEME.dimmedNode;
+        })
+        .attr('r', d => {
+          if (d.id === topCondId) return 12;
+          if (activeConditions.has(d.id) || activeSymptoms.has(d.id)) return 8;
+          return d.type === 'condition' ? 7 : 5;
+        });
+
+      // Update labels
+      GRAPH.labelEls
+        .transition().duration(500)
+        .attr('fill', d => {
+          if (activeConditions.has(d.id) || activeSymptoms.has(d.id)) return '#f8fafc';
+          return '#94a3b8';
+        })
+        .attr('opacity', d => {
+          return (activeConditions.has(d.id) || activeSymptoms.has(d.id)) ? 1.0 : 0.7;
+        })
+        .attr('font-size', d => {
+          if (d.id === topCondId) return '14px';
+          if (activeConditions.has(d.id) || activeSymptoms.has(d.id)) return '11px';
+          return '8px';
+        })
+        .style('font-weight', d => (activeConditions.has(d.id) || activeSymptoms.has(d.id)) ? '700' : '400');
+
+      // Dim the static base edges to emphasize the generated pathway
+      GRAPH.linkEls
+        .transition().duration(500)
+        .attr('stroke', THEME.dimmed)
+        .attr('stroke-width', 1)
+        .style('opacity', 0.3);
+
+      // Update stats
+      const hlNodes = activeSymptoms.size + activeConditions.size;
+      document.getElementById('graph-stats').textContent =
+        `Structured Global Graph · ${hlNodes} active nodes · ${dynamicEdges.length} active connections`;
+    }
+
+
+
+
+    const chatArea = document.getElementById('chat-area');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('send-btn');
+    const newChatBtn = document.getElementById('new-chat-btn');
+
+    let history = [];
+    let allSymptoms = [];
+    let allSymptomsDetailed = [];
+    let isLoading = false;
+
+    newChatBtn.addEventListener('click', () => {
+      if (confirm('Start a new session? Current conversation will be cleared.')) {
+        clearChat();
+      }
+    });
+
+    inputEl.addEventListener('input', () => {
+      sendBtn.disabled = inputEl.value.trim() === '' || isLoading;
+    });
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+    sendBtn.addEventListener('click', sendMessage);
+
+    function addMessage(role, text) {
+      const isUrgent = text.toUpperCase().includes('URGENT:');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `msg ${role}${isUrgent ? ' urgent' : ''}`;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'msg-avatar';
+      avatar.textContent = role === 'bot' ? 'AI' : 'ME';
+
+      const content = document.createElement('div');
+      content.className = 'msg-content';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
       bubble.textContent = text;
-    }
-    
-    content.appendChild(bubble);
-    msgDiv.appendChild(avatar);
-    msgDiv.appendChild(content);
-    
-    chatArea.appendChild(msgDiv);
-    chatArea.scrollTop = chatArea.scrollHeight;
-  }
 
-  function showTyping() {
-    const dots = document.createElement('div');
-    dots.id = 'typing-indicator';
-    dots.className = 'msg bot';
-    dots.innerHTML = `
+      content.appendChild(bubble);
+      msgDiv.appendChild(avatar);
+      msgDiv.appendChild(content);
+
+      chatArea.appendChild(msgDiv);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function showTyping() {
+      const dots = document.createElement('div');
+      dots.id = 'typing-indicator';
+      dots.className = 'msg bot';
+      dots.innerHTML = `
       <div class="msg-avatar">AI</div>
       <div class="msg-content">
         <div class="typing-dots">
@@ -1020,54 +1414,56 @@
         </div>
       </div>
     `;
-    chatArea.appendChild(dots);
-    chatArea.scrollTop = chatArea.scrollHeight;
-  }
+      chatArea.appendChild(dots);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
 
-  function removeTyping() {
-    const el = document.getElementById('typing-indicator');
-    if (el) el.remove();
-  }
+    function removeTyping() {
+      const el = document.getElementById('typing-indicator');
+      if (el) el.remove();
+    }
 
-  function clearChat() {
-    // Tell the server to drop the session so symptom history is wiped
-    if (sessionId) {
-      fetch('/session/clear', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId })
+    function clearChat() {
+      chatArea.innerHTML = '';
+      history = [];
+      allSymptoms = [];
+      allSymptomsDetailed = [];
+      updateDashboard({
+        extracted_symptoms: [],
+        top_conditions: [],
+        rag_sources: [],
+        graph_followups: [],
+        red_flags_detected: []
       });
-    }
-    sessionId = null;
-    chatArea.innerHTML = '';
-    history = [];
-    allSymptoms = [];
-    updateDashboard({
-      extracted_symptoms: [],
-      top_conditions: [],
-      rag_sources: [],
-      graph_followups: [],
-      red_flags_detected: []
-    });
-    addMessage('bot', "Session reset. How can I help you today?");
-  }
-
-  function updateDashboard(data) {
-    // Symptoms
-    const sympList = document.getElementById('symp-list');
-    if (data.extracted_symptoms?.length > 0) {
-      sympList.innerHTML = data.extracted_symptoms
-        .map(s => `<span class="tag tag-symptom">${s}</span>`).join('');
-    } else {
-      sympList.innerHTML = '<div class="empty-state">None identified yet</div>';
+      addMessage('bot', "Session reset. How can I help you today?");
     }
 
-    // Conditions
-    const condList = document.getElementById('cond-list');
-    if (data.top_conditions?.length > 0) {
-      condList.innerHTML = data.top_conditions.map(c => {
-        const pct = Math.round(c.score * 100);
-        return `
+    function updateDashboard(data) {
+      // Symptoms
+      const sympList = document.getElementById('symp-list');
+      if (data.extracted_symptoms_detailed?.length > 0) {
+        sympList.innerHTML = data.extracted_symptoms_detailed
+          .map(s => {
+            let badgeClass = 'tag-symptom';
+            if (s.status === 'past') badgeClass += ' past';
+            if (s.status === 'negated') badgeClass += ' negated';
+            let text = s.symptom;
+            if (s.status === 'past') text += ' (Past)';
+            return `<span class="tag ${badgeClass}">${text}</span>`;
+          }).join('');
+      } else if (data.extracted_symptoms?.length > 0) {
+        sympList.innerHTML = data.extracted_symptoms
+          .map(s => `<span class="tag tag-symptom">${s}</span>`).join('');
+      } else {
+        sympList.innerHTML = '<div class="empty-state">None identified yet</div>';
+      }
+
+      // Conditions
+      const condList = document.getElementById('cond-list');
+      if (data.top_conditions?.length > 0) {
+        condList.innerHTML = data.top_conditions.map(c => {
+          const pct = Math.round(c.score * 100);
+          return `
           <div class="condition-item">
             <div class="condition-header">
               <span class="condition-name">${c.display}</span>
@@ -1078,136 +1474,134 @@
             </div>
           </div>
         `;
-      }).join('');
-    } else {
-      condList.innerHTML = '<div class="empty-state">Awaiting context...</div>';
-    }
+        }).join('');
+      } else {
+        condList.innerHTML = '<div class="empty-state">Awaiting context...</div>';
+      }
 
-    // RAG
-    const ragList = document.getElementById('rag-list');
-    if (data.rag_sources?.length > 0) {
-      ragList.innerHTML = data.rag_sources
-        .map(s => `<div class="source-item"><div class="source-bullet"></div>${s}</div>`).join('');
-    } else {
-      ragList.innerHTML = '<div class="empty-state">No docs matched</div>';
-    }
+      // RAG
+      const ragList = document.getElementById('rag-list');
+      if (data.rag_sources?.length > 0) {
+        ragList.innerHTML = data.rag_sources
+          .map(s => `<div class="source-item"><div class="source-bullet"></div>${s}</div>`).join('');
+      } else {
+        ragList.innerHTML = '<div class="empty-state">No docs matched</div>';
+      }
 
-    // Follow-ups
-    const fuList = document.getElementById('fu-list');
-    if (data.graph_followups?.length > 0) {
-      fuList.innerHTML = data.graph_followups
-        .map(q => `<div class="q-item">${q}</div>`).join('');
-    } else {
-      fuList.innerHTML = '<div class="empty-state">None currently</div>';
-    }
+      // Follow-ups
+      const fuList = document.getElementById('fu-list');
+      if (data.graph_followups?.length > 0) {
+        fuList.innerHTML = data.graph_followups
+          .map(q => `<div class="q-item">${q}</div>`).join('');
+      } else {
+        fuList.innerHTML = '<div class="empty-state">None currently</div>';
+      }
 
-    // BFS Traversal Path
-    const travList = document.getElementById('trav-list');
-    const path = data.traversal_path || [];
-    if (path.length > 0) {
-      const shown = path.slice(0, 12);
-      travList.innerHTML =
-        `<div class="traversal-header">Visited ${path.length} edges · showing first ${shown.length}</div>` +
-        shown.map((step, i) => `
+      // BFS Traversal Path
+      const travList = document.getElementById('trav-list');
+      const path = data.traversal_path || [];
+      if (path.length > 0) {
+        const shown = path.slice(0, 12);  // show first 12 steps
+        travList.innerHTML =
+          `<div class="traversal-header">Visited ${path.length} edges · showing first ${shown.length}</div>` +
+          shown.map((step, i) => `
           <div class="traversal-step" style="animation-delay:${i * 40}ms">
             <span class="ts-from">${step.from}</span>
             <span class="ts-arrow">→</span>
             <span class="ts-to">${step.to}</span>
             <span class="ts-weight">w=${step.weight}</span>
           </div>`).join('');
-    } else {
-      travList.innerHTML = '<div class="empty-state">No traversal yet</div>';
+      } else {
+        travList.innerHTML = '<div class="empty-state">No traversal yet</div>';
+      }
+
+      // Red Flags
+      const rfCard = document.getElementById('card-redflags');
+      const rfList = document.getElementById('rf-list');
+      if (data.red_flags_detected?.length > 0) {
+        rfCard.style.display = 'block';
+        rfList.innerHTML = data.red_flags_detected
+          .map(f => `<span class="tag tag-flag">${f}</span>`).join('');
+      } else {
+        rfCard.style.display = 'none';
+      }
     }
 
-    // Red Flags
-    const rfCard = document.getElementById('card-redflags');
-    const rfList = document.getElementById('rf-list');
-    if (data.red_flags_detected?.length > 0) {
-      rfCard.style.display = 'block';
-      rfList.innerHTML = data.red_flags_detected
-        .map(f => `<span class="tag tag-flag">${f}</span>`).join('');
-    } else {
-      rfCard.style.display = 'none';
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text || isLoading) return;
+
+      inputEl.value = '';
+      sendBtn.disabled = true;
+      isLoading = true;
+
+      addMessage('user', text);
+      history.push({ role: 'user', content: text });
+      showTyping();
+
+      try {
+        if (!API_BASE) await resolveApiBase();
+        const res = await fetch(`${API_BASE}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: history,
+            extracted_symptoms: allSymptoms,
+            extracted_symptoms_detailed: allSymptomsDetailed,
+          })
+        });
+
+        if (!res.ok) {
+          let detail = '';
+          try {
+            const errBody = await res.json();
+            detail = errBody?.detail ? ` - ${errBody.detail}` : '';
+          } catch (_) {
+            // Ignore parse errors and keep status-only message.
+          }
+          throw new Error(`Status ${res.status}${detail}`);
+        }
+        const data = await res.json();
+
+        removeTyping();
+        allSymptoms = data.symptom_timeline || data.extracted_symptoms || [];
+        allSymptomsDetailed = data.extracted_symptoms_detailed || [];
+        history.push({ role: 'assistant', content: data.reply });
+        addMessage('bot', data.reply);
+        // Attach traversal path to data for dashboard rendering
+        data.traversal_path = data.top_conditions?.[0]?.traversal_path || [];
+        updateDashboard(data);
+        // Update graph highlighting with backend-provided journey edges.
+        highlightGraph(
+          data.symptom_timeline || data.extracted_symptoms || [],
+          data.top_conditions,
+          data.journey_edges || []
+        );
+
+      } catch (err) {
+        removeTyping();
+        const msg = String(err?.message || '');
+        if (window.location.protocol === 'https:') {
+          addMessage('bot', 'Protocol mismatch: open app on http://127.0.0.1:8000 (not https).');
+        } else if (msg.includes('NetworkError') || msg.includes('Failed to fetch')) {
+          addMessage('bot', 'Backend unreachable. Start API server: python -m app.main');
+        } else {
+          addMessage('bot', `System disruption. Please retry. (${msg || 'unknown error'})`);
+        }
+        console.error(err);
+      }
+
+      isLoading = false;
+      sendBtn.disabled = inputEl.value.trim() === '';
+      inputEl.focus();
     }
-  }
 
-  async function sendMessage() {
-    const text = inputEl.value.trim();
-    if (!text || isLoading) return;
-
-    inputEl.value = '';
-    sendBtn.disabled = true;
-    isLoading = true;
-
-    addMessage('user', text);
-    history.push({ role: 'user', content: text });
-    showTyping();
-
-    try {
-      const res = await fetch('/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: history,
-          session_id: sessionId,   // server echoes this back; null on first turn
-        })
-      });
-
-      if (!res.ok) throw new Error(`Status ${res.status}`);
-      const data = await res.json();
-
-      removeTyping();
-      // Server now owns the symptom timeline; we just store the session_id
-      sessionId = data.session_id;
-      allSymptoms = data.symptom_timeline || data.extracted_symptoms || [];
-      history.push({ role: 'assistant', content: data.reply });
-      addMessage('bot', data.reply);
-      data.traversal_path = data.top_conditions?.[0]?.traversal_path || [];
-      updateDashboard(data);
-      highlightGraph(
-        data.symptom_timeline || data.extracted_symptoms || [],
-        data.top_conditions,
-        data.journey_edges || []
-      );
-
-    } catch (err) {
-      removeTyping();
-      addMessage('bot', 'System disruption. Please retry.');
-      console.error(err);
+    // Init
+    window.onload = () => {
+      loadFullGraph();
+      addMessage('bot', "Welcome to SymptomAssist AI. Describe your symptoms in detail — the medical knowledge graph (built from 41 conditions and 130+ symptoms from a real dataset) will be traversed using BFS to identify likely conditions.\n\nHow are you feeling today?");
     }
-
-    isLoading = false;
-    sendBtn.disabled = inputEl.value.trim() === '';
-    inputEl.focus();
-  }
-
-  // Init
-  window.onload = () => {
-    loadFullGraph();
-    addMessage('bot', "Welcome to SymptomAssist AI. Describe your symptoms in detail — the medical knowledge graph (built from 41 conditions and 130+ symptoms from a real dataset) will be traversed using BFS to identify likely conditions.\n\nHow are you feeling today?");
-  }
-</script>
+  </script>
 </body>
-<script>
-  const toggleBtn = document.getElementById("theme-toggle");
-
-  // Load saved theme
-  if (localStorage.getItem("theme") === "dark") {
-    document.body.classList.add("dark-mode");
-    toggleBtn.textContent = "☀️";
-  }
-
-  toggleBtn.addEventListener("click", () => {
-    document.body.classList.toggle("dark-mode");
-
-    if (document.body.classList.contains("dark-mode")) {
-      localStorage.setItem("theme", "dark");
-      toggleBtn.textContent = "☀️";
-    } else {
-      localStorage.setItem("theme", "light");
-      toggleBtn.textContent = "🌙";
-    }
-  });
-</script>
 
 </html>

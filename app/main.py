@@ -33,20 +33,70 @@ import logging
 from .core.error_handler import APIErrorHandler, retry_with_backoff
 from .logging_config import setup_logging
 
-from .core.knowledge_graph import (
+import sys
+import pathlib
+
+_PROJECT_ROOT = pathlib.Path(__file__).parent.parent
+sys.path.insert(0, str(_PROJECT_ROOT))
+
+from app.core.knowledge_graph import (
     load_graph_from_csv, traverse_graph, find_candidate_conditions,
     get_followup_questions, get_treatment, check_red_flags, graph_summary
 )
-from .core.rag_pipeline import RAGPipeline
-from .core.nlp_extractor import SymptomExtractor
+from app.core.rag_pipeline import RAGPipeline
+from app.core.nlp_extractor import SymptomExtractor
 
-load_dotenv()
-setup_logging(log_dir="logs", level=logging.INFO)
+# ---------------------------------------------------------------------------
+# Resolve project paths and load environment
+# ---------------------------------------------------------------------------
+load_dotenv(_PROJECT_ROOT / ".env", override=True)
 
+
+def get_groq_api_key() -> str:
+    raw = os.getenv("GROQ_API_KEY", "")
+    cleaned = raw.strip().strip('"').strip("'")
+
+    print("👉 API KEY FROM ENV:", cleaned)   # ✅ ADD THIS LINE
+
+    return cleaned
+
+
+def ask_groq(prompt: str) -> str:
+    api_key = get_groq_api_key()
+
+    if not api_key:
+        return "AI is running in limited mode: GROQ_API_KEY is missing."
+
+    try:
+        print("API KEY LOADED:", api_key[:10])
+
+        client = Groq(api_key=api_key)
+
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "You are a helpful medical assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.5,
+        )
+
+        return response.choices[0].message.content
+
+    except Exception as e:
+        err = str(e).lower()
+        print("GROQ ERROR:", err)
+
+        if "api" in err and "key" in err:
+            return "❌ Invalid API Key. Please generate a NEW key and restart server."
+
+        if "model" in err:
+            return "❌ Model issue. Try changing model."
+
+        return "❌ AI error: " + str(e)
 # ---------------------------------------------------------------------------
 # Resolve dataset paths (relative to the project root)
 # ---------------------------------------------------------------------------
-_PROJECT_ROOT = pathlib.Path(__file__).parent.parent
 _SYMPTOM_CSV  = str(_PROJECT_ROOT / "data" / "symptom_disease.csv")
 _DOCS_CSV     = str(_PROJECT_ROOT / "data" / "medical_docs.csv")
 
@@ -60,8 +110,10 @@ print("[startup] Initialising RAG pipeline from CSV...")
 RAG = RAGPipeline(csv_path=_DOCS_CSV)
 print("[startup] Loading NLP extractor (dynamic lexicon from CSV)...")
 NLP = SymptomExtractor(csv_path=_SYMPTOM_CSV)
-print("[startup] Groq client ready.")
-GROQ = Groq(api_key=os.getenv("GROQ_API_KEY"))
+if get_groq_api_key():
+    print("[startup] Groq client ready.")
+else:
+    print("[startup] GROQ_API_KEY missing. Running in fallback mode without LLM.")
 
 # ---------------------------------------------------------------------------
 # Server-side session store  { session_id -> {symptoms, last_active} }
@@ -111,15 +163,20 @@ class Message(BaseModel):
     role: str       # "user" or "model" (Gemini uses "model", but frontend might still send it)
     content: str
 
+class TaggedSymptom(BaseModel):
+    symptom: str
+    status: str
+
 class ChatRequest(BaseModel):
     messages: List[Message]
-    session_id: Optional[str] = None        # server echoes this back; client stores and re-sends
-    extracted_symptoms: Optional[List[str]] = []  # kept for backwards-compat; ignored when session exists
+    extracted_symptoms: Optional[List[str]] = []  # accumulate across turns
+    extracted_symptoms_detailed: Optional[List[TaggedSymptom]] = []
 
 class ChatResponse(BaseModel):
     reply: str
     session_id: str                         # client must echo this on the next turn
     extracted_symptoms: List[str]
+    extracted_symptoms_detailed: List[TaggedSymptom] = []
     symptom_timeline: List[str] = []
     top_conditions: List[dict]
     rag_sources: List[str]
@@ -152,6 +209,7 @@ class GraphData(BaseModel):
 
 def build_system_prompt(
     extracted_symptoms: list,
+    extracted_symptoms_detailed: list,
     candidate_conditions: list,
     rag_context: str,
     followup_questions: list,
@@ -184,8 +242,13 @@ RULES:
     if red_flags:
         base += f"\n⚠️ RED FLAG SYMPTOMS DETECTED: {', '.join(red_flags)}\nIf these are present, immediately advise emergency care regardless of other context.\n"
 
-    if extracted_symptoms:
-        base += f"\nSYMPTOMS IDENTIFIED FROM PATIENT'S TEXT:\n{', '.join(extracted_symptoms)}\n"
+    if extracted_symptoms_detailed:
+        base += "\nSYMPTOMS IDENTIFIED FROM PATIENT'S TEXT WITH STATUS:\n"
+        for t in extracted_symptoms_detailed:
+            if isinstance(t, dict):
+                base += f"- {t['symptom']} (Status: {t['status']})\n"
+            else:
+                base += f"- {t.symptom} (Status: {t.status})\n"
 
     if candidate_conditions:
         base += "\nKNOWLEDGE GRAPH — BFS TRAVERSAL TOP CANDIDATE CONDITIONS:\n"
@@ -297,6 +360,12 @@ async def chat(request: ChatRequest):
         # Persist merged timeline back to session store
         SESSION_STORE[session_id]["symptoms"] = all_symptoms
 
+        existing_detailed = [t.dict() if not isinstance(t, dict) else t for t in (request.extracted_symptoms_detailed or [])]
+        tagged_dict = {t["symptom"]: t["status"] for t in existing_detailed}
+        for t in extraction.tagged:
+            tagged_dict[t["symptom"]] = t["status"]
+        all_symptoms_detailed = [{"symptom": k, "status": v} for k, v in tagged_dict.items()]
+
         # --- Step 2: Red flag check ---
         red_flags = check_red_flags(GRAPH, all_symptoms + (extraction.symptoms if extraction else []))
 
@@ -320,31 +389,45 @@ async def chat(request: ChatRequest):
         # --- Step 5: Build enriched system prompt ---
         system_prompt = build_system_prompt(
             extracted_symptoms=all_symptoms,
+            extracted_symptoms_detailed=all_symptoms_detailed,
             candidate_conditions=candidates,
             rag_context=rag_context,
             followup_questions=followup_questions,
             red_flags=red_flags,
         )
 
-        # --- Step 6: Call Groq with full context ---
-        # Map roles to Groq roles ("user" -> "user", "model" -> "assistant")
-        messages = [{"role": "system", "content": system_prompt}]
-        for m in request.messages:
-            role = "user" if m.role == "user" else "assistant"
-            messages.append({"role": role, "content": m.content})
-
-        try:
-            reply = call_groq_api(messages)
-        except Exception as e:
-            # Log full error for debugging
-            APIErrorHandler.log_error(e, "Groq API call failed in /chat endpoint")
-            # Get user-friendly message
-            reply = APIErrorHandler.get_user_message(e)
+        # --- Step 6: Call Groq ---
+        if not get_groq_api_key():
+            symptom_text = ", ".join(all_symptoms[:5]) if all_symptoms else "no clear symptom keywords"
+            if candidates:
+                top = candidates[0]["display"]
+                reply = (
+                    f"I noted these symptoms from your message: {symptom_text}. "
+                    f"Based on this limited analysis, one possible match is {top}. "
+                    "This is not a final diagnosis. "
+                    "I'm running in limited mode because GROQ_API_KEY is not configured, "
+                    "so replies may feel brief."
+                )
+            else:
+                reply = (
+                    f"I noted these symptoms from your message: {symptom_text}. "
+                    "I could not map them confidently to a likely condition yet. "
+                    "I'm running in limited mode because GROQ_API_KEY is not configured, "
+                    "so replies may feel brief."
+                )
+        else:
+            full_prompt = (
+                f"{system_prompt}\n\n"
+                f"Conversation so far:\n"
+                + "\n".join([f"{m.role}: {m.content}" for m in request.messages])
+            )
+            reply = ask_groq(full_prompt)
 
         return ChatResponse(
             reply=reply,
             session_id=session_id,
             extracted_symptoms=all_symptoms,
+            extracted_symptoms_detailed=[TaggedSymptom(**t) for t in all_symptoms_detailed],
             symptom_timeline=all_symptoms,
             top_conditions=[
                 {
@@ -370,16 +453,22 @@ async def chat(request: ChatRequest):
         APIErrorHandler.log_error(overall_e, "Critical error in /chat endpoint")
         with open("error_log.txt", "w") as f:
             f.write(err_msg)
-        raise HTTPException(status_code=500, detail=APIErrorHandler.get_user_message(overall_e))
-
-
-@app.post("/session/clear")
-async def clear_session(body: dict):
-    """Clears the symptom timeline for a given session (used by 'New Chat')."""
-    session_id = body.get("session_id")
-    if session_id and session_id in SESSION_STORE:
-        del SESSION_STORE[session_id]
-    return {"cleared": True}
+        # Fail soft so frontend can keep working and display a helpful reply.
+        return ChatResponse(
+            reply=(
+                "I'm sorry, I hit an internal processing issue while analyzing your message. "
+                "Please try rephrasing once."
+            ),
+            extracted_symptoms=request.extracted_symptoms or [],
+            extracted_symptoms_detailed=request.extracted_symptoms_detailed or [],
+            symptom_timeline=request.extracted_symptoms or [],
+            top_conditions=[],
+            rag_sources=[],
+            graph_followups=[],
+            red_flags_detected=[],
+            traversal_path=[],
+            journey_edges=[],
+        )
 
 
 # ---------------------------------------------------------------------------
