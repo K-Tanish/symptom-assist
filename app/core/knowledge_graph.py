@@ -181,24 +181,32 @@ def traverse_graph(G: nx.DiGraph, symptoms: list[str]) -> list[dict]:
 
     # -- Step 1: Match user symptoms to graph symptom nodes --
     matched_nodes: list[str] = []
+    matched_set: set[str] = set()   # tracks already-added nodes for O(1) dedup
     unmatched: list[str] = []
 
     for user_sym in symptoms:
         u = user_sym.lower().strip()
         # Exact match
         if u in G and G.nodes[u].get("node_type") == "symptom":
-            matched_nodes.append(u)
+            if u not in matched_set:
+                matched_nodes.append(u)
+                matched_set.add(u)
             continue
-        # Substring match
+        # Substring match — iterate every node to collect ALL matches,
+        # not just the first one.
         found = False
         for node in G.nodes:
             if G.nodes[node].get("node_type") == "symptom":
                 if u in node or node in u:
-                    matched_nodes.append(node)
                     found = True
-                    break
+                    if node not in matched_set:   # dedup check before append
+                        matched_nodes.append(node)
+                        matched_set.add(node)
         if not found:
             unmatched.append(u)
+
+
+        matched_nodes = list(set(matched_nodes))
 
     if not matched_nodes:
         return []

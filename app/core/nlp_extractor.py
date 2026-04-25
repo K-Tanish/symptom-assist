@@ -17,6 +17,16 @@ import re
 import csv
 import os
 from typing import NamedTuple
+import spacy
+
+try:
+    from rapidfuzz import process as fuzz_process, fuzz
+    _FUZZY_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    _FUZZY_AVAILABLE = False
+
+# Minimum similarity score (0-100) to accept a fuzzy match
+FUZZY_THRESHOLD = 85
 
 # Optional: use spaCy for better dependency parsing and tense detection.
 try:
@@ -135,10 +145,19 @@ _MANUAL_SYNONYMS: dict[str, list[str]] = {
 
 def _auto_synonyms(canonical: str) -> list[str]:
     """
-    Generate simple surface-form variants from a canonical symptom string.
-    E.g.  "burning urination" →  ["burning urination", "urination burning",
-                                   "burning when urinating", "burn urination"]
+    Generate simple variants of a canonical symptom string.
+
+    Includes basic normalization such as:
+    - replacing underscores with spaces
+    - handling simple plural forms
+
+    Args:
+        canonical (str): Base symptom string.
+
+    Returns:
+        list[str]: Generated synonym variants.
     """
+
     variants = {canonical}
     # Replace underscores if present
     variants.add(canonical.replace("_", " "))
@@ -150,9 +169,19 @@ def _auto_synonyms(canonical: str) -> list[str]:
 
 def build_lexicon_from_csv(csv_path: str) -> dict[str, list[str]]:
     """
-    Read symptom columns from the CSV and return a canonical → phrases dict.
-    Manual synonyms are merged in; CSV-derived symptoms without a manual
-    entry get auto-generated variants.
+    Build a symptom lexicon from a CSV dataset.
+
+    Extracts symptom columns and maps each canonical symptom
+    to a list of phrase variants, combining manual and auto-generated synonyms.
+
+    Args:
+        csv_path (str): Path to the dataset file.
+
+    Returns:
+        dict[str, list[str]]: Mapping of canonical symptoms to phrases.
+
+    Raises:
+        FileNotFoundError: If the dataset file does not exist.
     """
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"Dataset not found: {csv_path}")
@@ -197,6 +226,18 @@ class ExtractionResult(NamedTuple):
 
 class SymptomExtractor:
     def __init__(self, csv_path: str | None = None):
+        """
+        Initializes the SymptomExtractor.
+
+        Builds the symptom lexicon either from a CSV file or fallback manual synonyms.
+        Also prepares lookup structures and loads NLP model.
+
+        Args:
+            csv_path (str | None): Optional path to the dataset CSV file.
+
+        Returns:
+            None
+        """
         # Build lexicon from CSV if path provided; fall back to manual synonyms
         if csv_path and os.path.exists(csv_path):
             lexicon = build_lexicon_from_csv(csv_path)
@@ -213,6 +254,9 @@ class SymptomExtractor:
         self.sorted_phrases = sorted(
             self.phrase_to_symptom.keys(), key=len, reverse=True
         )
+
+        # Pre-build a flat list of all phrases for fuzzy candidate lookup
+        self._all_phrases: list[str] = list(self.phrase_to_symptom.keys())
 
         self.negation_patterns = re.compile(
             r"\b(no|not|without|don't have|doesn't have|haven't|hasn't|never|"
@@ -249,8 +293,85 @@ class SymptomExtractor:
             except Exception:
                 self.nlp = None
 
+        # Initialize spaCy for dependency-based negation parsing
+        try:
+            self.nlp = spacy.load("en_core_web_sm")
+        except OSError:
+            print("[NLP] Model 'en_core_web_sm' not found. Please run 'python -m spacy download en_core_web_sm'")
+            self.nlp = None
+
         print(f"[NLP] Lexicon loaded: {len(lexicon)} canonical symptoms, "
               f"{len(self.phrase_to_symptom)} total phrases")
+
+    def _is_negated(self, doc, start_char: int, end_char: int) -> bool:
+        """
+        Checks whether a detected symptom is negated in the sentence.
+
+        Uses dependency parsing to determine if negation words are associated
+        with the symptom.
+
+        Args:
+            doc (spacy.tokens.Doc): spaCy processed document.
+            start_char (int): Start index of the symptom in text.
+            end_char (int): End index of the symptom in text.
+
+        Returns:
+            bool: True if the symptom is negated, otherwise False.
+        """
+        if not doc:
+            return False
+
+        # Find tokens that overlap with the character range [start_char, end_char)
+        symptom_tokens = [t for t in doc if t.idx >= start_char and t.idx < end_char]
+        if not symptom_tokens:
+            # Fallback for tokens that might start slightly before start_char (e.g. whitespace)
+            symptom_tokens = [t for t in doc if t.idx + len(t.text) > start_char and t.idx < end_char]
+
+        negation_words = {"no", "not", "without", "never", "deny", "denies", "absence", "negative"}
+
+        for token in symptom_tokens:
+            # 1. Direct children negation (e.g., "no fever")
+            if any(child.dep_ == "neg" or child.lemma_.lower() in negation_words for child in token.children):
+                return True
+            
+            # 2. Check ancestors (e.g., "denies pain" or "don't HAVE headache")
+            curr = token
+            while curr != curr.head:
+                curr = curr.head
+                # Check if the ancestor itself is a negation word (e.g. "DENIES pain")
+                if curr.lemma_.lower() in negation_words:
+                    return True
+                # If the ancestor has a negation child (e.g. "don't HAVE headache")
+                if any(child.dep_ == "neg" or child.lemma_.lower() in negation_words for child in curr.children):
+                    return True
+                if curr.pos_ == "VERB":
+                    break
+
+        return False
+
+    def _fuzzy_match_token(self, token: str) -> tuple[str, str] | None:
+        """
+        Attempts to fuzzy match a token or phrase against known symptom phrases.
+
+        Args:
+            token (str): Input token or phrase.
+
+        Returns:
+            tuple[str, str] | None: Matched phrase and canonical symptom,
+            or None if no match is found.
+        """
+        if not _FUZZY_AVAILABLE or len(token) < 3:
+            return None
+        result = fuzz_process.extractOne(
+            token,
+            self._all_phrases,
+            scorer=fuzz.WRatio,
+            score_cutoff=FUZZY_THRESHOLD,
+        )
+        if result is None:
+            return None
+        matched_phrase, score, _ = result
+        return matched_phrase, self.phrase_to_symptom[matched_phrase]
 
     def extract(self, text: str) -> ExtractionResult:
         text_lower = text.lower()
@@ -382,6 +503,47 @@ class SymptomExtractor:
 
                 start = idx + 1
 
+        # ── Fuzzy fallback pass ──────────────────────────────────────────
+        # Tokenize the text into word n-grams (1–3 words) that weren't
+        # already covered by exact matching, then fuzzy-match each against
+        # the full phrase lexicon.
+        if _FUZZY_AVAILABLE:
+            words = re.findall(r"[a-z']+", text_lower)
+            # Generate trigrams → bigrams → unigrams (longest wins)
+            candidates: list[tuple[int, str]] = []
+            for n in (3, 2, 1):
+                for i in range(len(words) - n + 1):
+                    ngram = " ".join(words[i: i + n])
+                    approx_pos = text_lower.find(ngram)
+                    if approx_pos == -1:
+                        continue
+                    positions = set(range(approx_pos, approx_pos + len(ngram)))
+                    if positions & matched_positions:
+                        continue  # already matched exactly
+                    candidates.append((approx_pos, ngram))
+
+            seen_positions: set[int] = set()
+            for approx_pos, ngram in candidates:
+                positions = set(range(approx_pos, approx_pos + len(ngram)))
+                if positions & seen_positions:
+                    continue
+
+                hit = self._fuzzy_match_token(ngram)
+                if hit is None:
+                    continue
+
+                matched_phrase, canonical = hit
+                seen_positions |= positions
+                matched_positions |= positions
+                raw_mentions.append(ngram)
+
+                if self._is_negated(doc, approx_pos, approx_pos + len(ngram)):
+                    if canonical not in negated_symptoms:
+                        negated_symptoms.append(canonical)
+                else:
+                    if canonical not in found_symptoms:
+                        found_symptoms.append(canonical)
+
         return ExtractionResult(
             symptoms     = found_symptoms,
             raw_mentions = raw_mentions,
@@ -444,18 +606,26 @@ if __name__ == "__main__":
     csv_p = str(_here / "data" / "symptom_disease.csv")
 
     extractor = SymptomExtractor(csv_path=csv_p)
+    
+    print("\n" + "="*40)
+    print("      SYMPTOM EXTRACTION TESTER")
+    print("="*40)
+    print("Type your symptoms (or 'quit' to exit)")
 
-    tests = [
-        "I have a terrible headache on one side that's throbbing, sensitive to light",
-        "I've been vomiting and have diarrhoea, also stomach cramps",
-        "I feel really tired, have a fever and chills, my body is aching",
-        "I have no fever but my throat is sore and it hurts to swallow",
-        "burning sensation when I pee and I need to go to the toilet frequently",
-    ]
-    for t in tests:
-        r = extractor.extract(t)
-        print(f"Input:    {t[:65]}...")
-        print(f"  Found:   {r.symptoms}")
-        if r.negated:
-            print(f"  Negated: {r.negated}")
-        print()
+    while True:
+        try:
+            t = input("\n[Input]: ").strip()
+            if not t or t.lower() in ["quit", "exit", "q"]:
+                print("Exiting...")
+                break
+                
+            r = extractor.extract(t)
+            print(f"  [Found]:   {r.symptoms}")
+            if r.negated:
+                print(f"  [Negated]: {r.negated}")
+            if not r.symptoms and not r.negated:
+                print("  [Result]:  No symptoms detected.")
+                
+        except KeyboardInterrupt:
+            print("\nExiting...")
+            break

@@ -14,7 +14,7 @@ cl_symptom/
 │   │   ├── __init__.py
 │   │   ├── knowledge_graph.py   # Symbolic Inference (NetworkX)
 │   │   ├── nlp_extractor.py     # Symptom extraction (Lexicon-based)
-│   │   └── rag_pipeline.py      # Medical RAG (TF-IDF Retrieval)
+│   │   └── rag_pipeline.py      # Medical RAG (Semantic Retrieval)
 │   ├── __init__.py
 │   └── main.py           # FastAPI Web Server (Orchestration)
 ├── data/                 # Knowledge Datasets
@@ -48,7 +48,9 @@ Create/Edit the [`.env`](file:///.env) file at the project root:
 GEMINI_API_KEY=your_gemini_key_optional
 GROQ_API_KEY=your_groq_api_key_here
 ```
+Copy the example environment file and fill in your keys:
 
+cp .env.example .env
 ---
 
 ##  Running the System

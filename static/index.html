@@ -11,6 +11,8 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
     rel="stylesheet">
   <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
   <style>
     :root {
       --primary: #14b8a6;
@@ -47,6 +49,10 @@
       overflow: hidden;
     }
 
+    .dark-mode body {
+      background: #020617;
+    }
+
     /* ---- Main Layout Container ---- */
     #root {
       display: flex;
@@ -63,6 +69,10 @@
       position: relative;
     }
 
+    .dark-mode #root {
+      background: rgba(2, 6, 23, 0.8);
+    }
+
     /* ---- Chat Section ---- */
     #chat-section {
       flex: 1;
@@ -71,6 +81,10 @@
       position: relative;
       background: var(--chat-bg);
       border-right: 1px solid rgba(203, 213, 225, 0.9);
+    }
+
+    .dark-mode #chat-section {
+      background: #020617;
     }
 
     header {
@@ -379,10 +393,19 @@
       padding: 0;
     }
 
+    .dark-mode #sidebar {
+      background: #020617;
+    }
+
     .sidebar-header {
       padding: 24px 32px;
       border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-      background: rgba(255, 255, 255, 0.5);
+      background: var(--chat-bg);
+    }
+    
+    .dark-mode .sidebar-header {
+      background: #020617;
+      border-bottom: 1px solid #1e293b;
     }
 
     .sidebar-header h2 {
@@ -661,7 +684,7 @@
     }
 
     .tab-btn.active {
-      background: #fff;
+      background: var(--chat-bg);
       color: var(--primary);
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     }
