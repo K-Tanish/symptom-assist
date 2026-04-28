@@ -56,20 +56,62 @@ class SemanticRetriever:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
         from sentence_transformers import SentenceTransformer
         self.model = SentenceTransformer(model_name)
-        self.documents = []
-        self.doc_embeddings = None
+        self.chunks = []
+        self.chunk_embeddings = None
 
-    def index(self, documents: list[dict]):
-        self.documents = documents
-        texts = [d["content"] + " " + d["title"] for d in documents]
-        if texts:
-            self.doc_embeddings = self.model.encode(texts)
-            print(f"[RAG] Indexed {len(documents)} documents using semantic embeddings")
+    def _chunk_text(self, text: str, chunk_size: int = 400, overlap: int = 50) -> list[str]:
+        """
+        Split text into chunks of roughly `chunk_size` words with `overlap` words.
+        Using words as a proxy for tokens.
+        """
+        words = text.split()
+        if not words:
+            return []
+        
+        chunks = []
+        for i in range(0, len(words), chunk_size - overlap):
+            chunk = " ".join(words[i : i + chunk_size])
+            chunks.append(chunk)
+            # If we've reached the end of the text, stop
+            if i + chunk_size >= len(words):
+                break
+        return chunks
+
+    def index(self, documents: list[dict], chunk_size: int = 400, overlap: int = 50):
+        """
+        Processes documents by splitting them into chunks and embedding each chunk.
+        """
+        self.chunks = []
+        texts_to_embed = []
+
+        for doc in documents:
+            content = doc.get("content", "")
+            title = doc.get("title", "")
+            
+            # Split the document into overlapping chunks
+            doc_chunks = self._chunk_text(content, chunk_size, overlap)
+            
+            for i, chunk_text in enumerate(doc_chunks):
+                # Store chunk with a reference to the original document
+                chunk_data = {
+                    "id": f"{doc['id']}_chunk_{i}",
+                    "original_id": doc["id"],
+                    "condition": doc["condition"],
+                    "title": title,
+                    "content": chunk_text
+                }
+                self.chunks.append(chunk_data)
+                # Embed the chunk content along with the title for context
+                texts_to_embed.append(f"{title}: {chunk_text}")
+
+        if texts_to_embed:
+            self.chunk_embeddings = self.model.encode(texts_to_embed)
+            print(f"[RAG] Indexed {len(self.chunks)} chunks from {len(documents)} documents")
         else:
-            self.doc_embeddings = []
+            self.chunk_embeddings = []
 
     def retrieve(self, query: str, top_k: int = 3) -> list[dict]:
-        if not self.documents or len(self.doc_embeddings) == 0:
+        if not self.chunks or self.chunk_embeddings is None or len(self.chunk_embeddings) == 0:
             return []
 
         import numpy as np
@@ -78,19 +120,30 @@ class SemanticRetriever:
         query_embedding = self.model.encode(query)
         
         scores = []
-        for i, doc_vec in enumerate(self.doc_embeddings):
-            # scipy.spatial.distance.cosine computes distance (1 - similarity)
-            dist = cosine(query_embedding, doc_vec)
+        for i, chunk_vec in enumerate(self.chunk_embeddings):
+            dist = cosine(query_embedding, chunk_vec)
             score = 0.0 if np.isnan(dist) else 1.0 - dist
             scores.append((float(score), i))
 
         scores.sort(reverse=True)
         results = []
-        for score, idx in scores[:top_k]:
+        # Track original IDs to avoid returning multiple chunks from the same document
+        # if they are highly similar (optional, but usually cleaner)
+        seen_docs = set()
+        
+        for score, idx in scores:
+            if len(results) >= top_k:
+                break
             if score > 0:
-                doc = self.documents[idx].copy()
-                doc["relevance_score"] = round(score, 4)
-                results.append(doc)
+                chunk = self.chunks[idx].copy()
+                doc_id = chunk["original_id"]
+                
+                # Deduplication logic: only return the best chunk per document
+                if doc_id not in seen_docs:
+                    chunk["relevance_score"] = round(score, 4)
+                    results.append(chunk)
+                    seen_docs.add(doc_id)
+                    
         return results
 
 
