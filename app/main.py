@@ -296,6 +296,15 @@ async def chat(request: ChatRequest):
 
         # --- Step 1: NLP extraction ---
         extraction = NLP.extract(latest_user_msg)
+        # 🚨 Handle mixed valid + invalid input
+        noise_message = ""
+
+        if extraction.symptoms and extraction.noise:
+            noise_message = f"I understood {', '.join(extraction.symptoms)}, but some parts of your input were unclear."
+
+        elif not extraction.symptoms:
+            noise_message = "I couldn't identify any valid symptoms. Please describe your symptoms clearly."# 🚨 Handle mixed valid + invalid input
+
         all_symptoms = merge_symptom_timeline(prior_symptoms, extraction.symptoms)
 
         # Persist merged timeline back to session store
@@ -339,6 +348,8 @@ async def chat(request: ChatRequest):
 
         try:
             reply = call_groq_api(messages)
+            if noise_message:
+                reply = noise_message + "\n\n" + reply
         except Exception as e:
             # Log full error for debugging
             APIErrorHandler.log_error(e, "Groq API call failed in /chat endpoint")

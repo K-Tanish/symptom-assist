@@ -221,6 +221,7 @@ class ExtractionResult(NamedTuple):
     symptoms:    list   # canonical symptom names found
     raw_mentions: list  # original phrases from user text
     negated:     list   # symptoms mentioned but negated ("no fever")
+    noise: list
 
 
 class SymptomExtractor:
@@ -433,11 +434,35 @@ class SymptomExtractor:
                 else:
                     if canonical not in found_symptoms:
                         found_symptoms.append(canonical)
+        # 🔥 Filter: keep only symptoms that actually relate to input words
+        cleaned_symptoms = []
+        STOPWORDS = {"and", "or", "the", "a", "i", "have", "has", "had"}
 
+        input_words = set(
+            word for word in re.findall(r"[a-z']+", text_lower)
+            if word not in STOPWORDS
+        )
+
+        for symptom in found_symptoms:
+            symptom_words = set(symptom.split())
+            if symptom_words & input_words:  # at least one meaningful overlap
+                cleaned_symptoms.append(symptom)
+                
+        original_words = set(re.findall(r"[a-zA-ZS']+", text_lower))
+        matched_words = set()
+        for symptom in found_symptoms:
+            matched_words.update(symptom.split())
+
+        noise_words = [
+            word for word in (original_words-matched_words)
+            if word not in STOPWORDS and len(word) >3
+        ]
+        found_symptoms = cleaned_symptoms
         return ExtractionResult(
-            symptoms     = found_symptoms,
+            symptoms = found_symptoms,
             raw_mentions = raw_mentions,
-            negated      = negated_symptoms,
+            negated = negated_symptoms,
+            noise = list(noise_words)   # 👈 ADD THIS
         )
 
 
