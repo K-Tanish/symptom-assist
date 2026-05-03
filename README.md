@@ -57,7 +57,7 @@ To start the FastAPI server with live-reloading:
 ```bash
 python -m app.main
 ```
-Once started, open your browser at [**http://127.0.0.1:8000**](http://127.0.0.1:8000).
+Once started, open your browser at [**http://127.0.0.1:8080**](http://127.0.0.1:8080).
 
 ---
 

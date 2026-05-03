@@ -16,12 +16,12 @@
       --primary: #14b8a6;
       --primary-light: #5eead4;
       --primary-dark: #0f766e;
-      --bg: #edf4ff;
-      --sidebar-bg: #f4f8ff;
-      --chat-bg: #172338;
+      --bg: #f8fafc;
+      --sidebar-bg: #ffffff;
+      --chat-bg: #ffffff;
       --text-main: #0f172a;
       --text-muted: #64748b;
-      --glass-border: rgba(30, 41, 59, 0.2);
+      --glass-border: rgba(226, 232, 240, 0.8);
       --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -78,8 +78,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #314158;
-      background: rgba(23, 35, 56, 0.84);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      background: rgba(255, 255, 255, 0.84);
     }
 
     .brand {
@@ -109,13 +109,13 @@
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 18px;
       font-weight: 800;
-      color: #e2e8f0;
+      color: var(--text-main);
       letter-spacing: -0.02em;
     }
 
     .brand-text p {
       font-size: 12px;
-      color: #94a3b8;
+      color: var(--text-muted);
       font-weight: 500;
     }
 
@@ -176,7 +176,7 @@
     }
 
     #chat-area::-webkit-scrollbar-thumb {
-      background: #334155;
+      background: #cbd5e1;
       border-radius: 10px;
     }
 
@@ -215,13 +215,13 @@
     }
 
     .bot .msg-avatar {
-      background: #1d2b40;
-      color: var(--primary-light);
-      border: 1px solid #3b4b64;
+      background: #f8fafc;
+      color: var(--primary-dark);
+      border: 1px solid #e2e8f0;
     }
 
     .user .msg-avatar {
-      background: var(--primary);
+      background: var(--primary-dark);
       color: #fff;
     }
 
@@ -240,14 +240,14 @@
     }
 
     .bot .msg-bubble {
-      background: #2a3a52;
-      color: #e2e8f0;
+      background: #f8fafc;
+      color: var(--text-main);
       border-top-left-radius: 4px;
-      border: 1px solid #41526d;
+      border: 1px solid #e2e8f0;
     }
 
     .user .msg-bubble {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      background: var(--primary-dark);
       color: #fff;
       border-top-right-radius: 4px;
       box-shadow: 0 4px 12px rgba(15, 118, 110, 0.15);
@@ -263,9 +263,9 @@
       display: flex;
       gap: 4px;
       padding: 12px 16px;
-      background: #2a3a52;
+      background: #f8fafc;
       border-radius: 20px;
-      border: 1px solid #41526d;
+      border: 1px solid #e2e8f0;
       width: fit-content;
     }
 
@@ -302,15 +302,15 @@
     /* Footer */
     footer {
       padding: 24px 32px 32px;
-      background: #172338;
+      background: var(--chat-bg);
       position: relative;
     }
 
     .input-wrapper {
       display: flex;
       gap: 12px;
-      background: #324560;
-      border: 1.5px solid #4a5f7e;
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
       border-radius: 16px;
       padding: 6px;
       transition: all 0.2s ease;
@@ -330,7 +330,7 @@
       font-family: inherit;
       font-size: 15px;
       outline: none;
-      color: #e2e8f0;
+      color: var(--text-main);
     }
 
     #send-btn {
@@ -822,6 +822,97 @@
         border-radius: 0;
       }
     }
+    /* MODAL BACKDROP */
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    /* MODAL BOX */
+    .modal-box {
+      background: white;
+      padding: 24px 28px;
+      border-radius: 16px;
+      width: 320px;
+      text-align: center;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+      animation: popIn 0.2s ease;
+    }
+
+    /* TITLE */
+    .modal-box h3 {
+      margin-bottom: 8px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* TEXT */
+    .modal-box p {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 20px;
+    }
+
+    /* BUTTONS CONTAINER */
+    .modal-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    /* CANCEL BUTTON */
+    #cancelBtn {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      background: #f5f5f5;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    #cancelBtn:hover {
+      background: #eaeaea;
+    }
+
+    /* CONFIRM BUTTON */
+    #confirmBtn {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      background: #0f766e;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    #confirmBtn:hover {
+      background: #0d5f58;
+    }
+
+    /* ANIMATION */
+    @keyframes popIn {
+      from {
+        transform: scale(0.9);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
   </style>
 </head>
 
@@ -1003,6 +1094,17 @@
     </aside>
   </div>
 
+  <div id="confirmModal" class="modal">
+    <div class="modal-box">
+      <h3>Start new session?</h3>
+      <p>This will clear your current conversation.</p>
+      <div class="modal-actions">
+        <button id="cancelBtn">Cancel</button>
+        <button id="confirmBtn">Start New</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ============================================================
     // Tab Switcher
@@ -1044,8 +1146,8 @@
     let API_BASE = '';
     const API_BASE_CANDIDATES = [
       '',
-      'http://127.0.0.1:8000',
-      'http://localhost:8000',
+      'http://127.0.0.1:8080',
+      'http://localhost:8080',
     ];
     async function resolveApiBase() {
       const pageIsHttps = window.location.protocol === 'https:';
@@ -1064,7 +1166,7 @@
           // Keep trying next candidate.
         }
       }
-      API_BASE = 'http://127.0.0.1:8000';
+      API_BASE = 'http://127.0.0.1:8080';
       return API_BASE;
     }
 
@@ -1339,10 +1441,21 @@
     let allSymptomsDetailed = [];
     let isLoading = false;
 
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+
     newChatBtn.addEventListener('click', () => {
-      if (confirm('Start a new session? Current conversation will be cleared.')) {
-        clearChat();
-      }
+      confirmModal.classList.add('show');
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      confirmModal.classList.remove('show');
+    });
+
+    confirmBtn.addEventListener('click', () => {
+      confirmModal.classList.remove('show');
+      clearChat();
     });
 
     inputEl.addEventListener('input', () => {
@@ -1559,7 +1672,7 @@
         removeTyping();
         const msg = String(err?.message || '');
         if (window.location.protocol === 'https:') {
-          addMessage('bot', 'Protocol mismatch: open app on http://127.0.0.1:8000 (not https).');
+          addMessage('bot', 'Protocol mismatch: open app on http://127.0.0.1:8080 (not https).');
         } else if (msg.includes('NetworkError') || msg.includes('Failed to fetch')) {
           addMessage('bot', 'Backend unreachable. Start API server: python -m app.main');
         } else {
