@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
@@ -1101,6 +1101,32 @@
       <div class="modal-actions">
         <button id="cancelBtn">Cancel</button>
         <button id="confirmBtn">Start New</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SymptomAssist AI | Intelligent Medical Reasoning</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/split.js/dist/split.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div id="confirmModal" class="modal">
+      <div class="modal-box">
+        <h3>Start new session?</h3>
+        <p>This will clear your current conversation.</p>
+
+        <div class="modal-actions">
+          <button id="cancelBtn">Cancel</button>
+          <button id="confirmBtn">Start New</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1558,9 +1584,40 @@
             <div class="condition-header">
               <span class="condition-name">${c.display}</span>
               <span class="severity sev-${c.severity}">${c.severity}</span>
+    <div id="summaryModal" class="modal">
+      <div class="modal-box">
+        <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Visit-Ready Summary
+        </h3>
+        <div id="summary-text-area">Loading summary...</div>
+        <div class="summary-actions">
+          <button class="btn-secondary" id="closeSummaryBtn">Close</button>
+          <button class="btn-secondary" id="copySummaryBtn">Copy to Clipboard</button>
+          <button class="btn-primary" id="printSummaryBtn">Print Summary</button>
+        </div>
+      </div>
+    </div>
+    <div id="root">
+      <!-- Left: Chat Section -->
+      <section id="chat-section">
+        <header>
+          <div class="brand">
+            <div class="brand-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+              </svg>
             </div>
-            <div class="progress-track">
-              <div class="progress-fill" style="width: ${pct}%"></div>
+            <div class="brand-text">
+              <h1>SymptomAssist</h1>
+              <p>Cognitive Health Advisor</p>
             </div>
           </div>
         `;
@@ -1694,4 +1751,335 @@
   </script>
 </body>
 
+</html>
+          <div style="display: flex; align-items: center; gap: 12px">
+            <!-- 🌙 Theme Toggle -->
+            <button
+              id="theme-toggle"
+              style="
+                background: #e2e8f0;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 10px;
+                cursor: pointer;
+              "
+            >
+              🌙
+            </button>
+
+            <!-- Summary Button -->
+            <button
+              id="viewSummaryBtn"
+              style="
+                background: rgba(15, 118, 110, 0.1);
+                color: var(--primary);
+                border: 1px solid rgba(15, 118, 110, 0.2);
+                padding: 8px 14px;
+                border-radius: 10px;
+                font-size: 11px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.2s;
+              "
+            >
+              SUMMARY
+            </button>
+
+            <!-- New Chat Button -->
+            <button
+              id="newChatBtn"
+              style="
+                background: rgba(15, 118, 110, 0.1);
+                color: var(--primary);
+                border: 1px solid rgba(15, 118, 110, 0.2);
+                padding: 8px 14px;
+                border-radius: 10px;
+                font-size: 11px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.2s;
+              "
+            >
+              NEW CHAT
+            </button>
+            <div class="status-indicator">
+              <div class="status-dot"></div>
+              <span>Live Analysis</span>
+            </div>
+          </div>
+        </header>
+
+        <div id="chat-area"></div>
+
+        <footer>
+          <div class="input-wrapper">
+            <input
+              id="input"
+              type="text"
+              placeholder="Describe how you're feeling today..."
+              autocomplete="off"
+            />
+            <button id="send-btn" disabled aria-label="Send message">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
+          <p class="disclaimer">
+            Not a substitute for professional medical advice. If you have an
+            emergency, call 108 (or your local emergency number).
+          </p>
+        </footer>
+      </section>
+
+      <!-- Right: Diagnostics Sidebar -->
+      <aside id="sidebar">
+        <div class="sidebar-header">
+          <h2>Diagnostics Panel</h2>
+          <p>Multi-modal Reasoning Output</p>
+          <div class="tab-bar">
+            <button
+              class="tab-btn active"
+              id="tab-diag"
+              onclick="switchTab('diag')"
+            >
+              Diagnostics
+            </button>
+            <button class="tab-btn" id="tab-graph" onclick="switchTab('graph')">
+              Knowledge Graph
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 1: Diagnostics -->
+        <div id="panel-diag" class="tab-panel active sidebar-content">
+          <!-- Symptoms Card -->
+          <div class="card" id="card-symptoms">
+            <div class="card-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              Extracted Symptoms
+            </div>
+            <div id="symp-list" class="badge-grid">
+              <div class="empty-state">Waiting for patient description...</div>
+            </div>
+          </div>
+
+          <!-- Conditions Card -->
+          <div class="card" id="card-conditions">
+            <div class="card-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+              Traversal Matches
+            </div>
+            <div id="cond-list">
+              <div class="empty-state">Awaiting traversal...</div>
+            </div>
+          </div>
+
+          <!-- RAG Card -->
+          <div class="card" id="card-rag">
+            <div class="card-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path
+                  d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+                />
+              </svg>
+              Medical Context (RAG)
+            </div>
+            <div id="rag-list">
+              <div class="empty-state">No documents retrieved</div>
+            </div>
+          </div>
+
+          <!-- Follow-ups Card -->
+          <div class="card" id="card-followups">
+            <div class="card-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              Reasoning Tree
+            </div>
+            <div id="fu-list">
+              <div class="empty-state">Awaiting turns...</div>
+            </div>
+          </div>
+
+          <!-- Traversal Path Card -->
+          <div class="card" id="card-traversal">
+            <div class="card-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+              BFS Traversal Path
+            </div>
+            <div id="trav-list">
+              <div class="empty-state">Graph not yet traversed</div>
+            </div>
+          </div>
+
+          <!-- Red Flags Card -->
+          <div
+            class="card"
+            id="card-redflags"
+            style="display: none; border-color: #fee2e2; background: #fefce8"
+          >
+            <div class="card-label" style="color: #dc2626">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              Priority Red Flags
+            </div>
+            <div id="rf-list" class="badge-grid"></div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Traversal Graph -->
+        <div
+          id="panel-graph"
+          class="tab-panel"
+          style="
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #f8fafc;
+          "
+        >
+          <div
+            id="graph-panel"
+            style="
+              width: 100%;
+              height: 100%;
+              overflow: hidden;
+              position: relative;
+            "
+          >
+            <svg
+              id="graph-svg"
+              width="800"
+              height="600"
+              viewBox="0 0 800 600"
+            ></svg>
+            <div
+              id="graph-empty-hint"
+              style="
+                position: absolute;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                pointer-events: none;
+              "
+            >
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#cbd5e1"
+                stroke-width="1.5"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 8v4l3 3" />
+              </svg>
+              <p
+                style="
+                  color: #94a3b8;
+                  font-size: 13px;
+                  margin-top: 12px;
+                  text-align: center;
+                  line-height: 1.6;
+                "
+              >
+                Graph builds as you chat.<br />Send a symptom description to
+                begin traversal.
+              </p>
+            </div>
+            <div id="graph-legend" style="bottom: 10px">
+              <div class="legend-item">
+                <div class="legend-dot" style="background: #3b82f6"></div>
+                Symptom (input)
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background: #0d9488"></div>
+                Condition (output)
+              </div>
+              <div class="legend-item">
+                <div
+                  class="legend-dot"
+                  style="
+                    background: #f59e0b;
+                    width: 30px;
+                    height: 3px;
+                    border-radius: 1px;
+                  "
+                ></div>
+                Traversal edge
+              </div>
+            </div>
+            <div id="graph-stats" style="top: 10px; bottom: auto">
+              Traversal Graph — awaiting input
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
 </html>

@@ -1,0 +1,18 @@
+2026-05-01 13:48:48,814 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [unknown] Critical error in /chat endpoint: NameError: name 'prior_symptoms' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Harshitha Reddy\OneDrive\Desktop\Sympton assist\symptom-assist\app\main.py", line 326, in chat
+    all_symptoms_data = merge_symptom_timeline(prior_symptoms, extraction.symptoms)
+                                               ^^^^^^^^^^^^^^
+NameError: name 'prior_symptoms' is not defined
+2026-05-01 13:51:33,468 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [unknown] Critical error in /chat endpoint: NameError: name 'session_id' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Harshitha Reddy\OneDrive\Desktop\Sympton assist\symptom-assist\app\main.py", line 343, in chat
+    SESSION_STORE[session_id]["symptoms"] = all_symptoms_data
+                  ^^^^^^^^^^
+NameError: name 'session_id' is not defined
+2026-05-01 14:10:22,210 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [unknown] Critical error in /chat endpoint: NameError: name 'top_conditions' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Harshitha Reddy\OneDrive\Desktop\Sympton assist\symptom-assist\app\main.py", line 354, in chat
+    top_conditions.append({
+    ^^^^^^^^^^^^^^
+NameError: name 'top_conditions' is not defined. Did you mean: 'top_condition'?
