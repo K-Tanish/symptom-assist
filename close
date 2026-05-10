@@ -1,0 +1,92 @@
+[33m381445d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m save local work
+[33m122876d[m Merge pull request #64 from harshithareddy007/fix-noise-filtering
+[33m2e270cc[m Merge branch 'main' into fix-noise-filtering
+[33m09005bc[m Merge pull request #68 from harshithareddy007/feature-xai-explainability
+[33m6bd5247[m Update README.md
+[33m8d40b4f[m Merge pull request #69 from Praptii21/feature/chat-input-validation
+[33m22af85f[m security: add length and content validation to chat input
+[33mc5a6b06[m Merge branch 'main' into fix-noise-filtering
+[33m23b55e5[m Merge pull request #66 from harshithareddy007/inconsistent-text
+[33mb5b83e2[m feat: add explainable AI (XAI) fields to improve transparency
+[33mcaeca9f[m Resolve merge conflicts and keep improved NLP + response handling
+[33mff9bf4f[m Merge pull request #67 from Praptii21/feature/temporal-reasoning
+[33mabb0bd0[m Resolve merge conflict between temporal context and noise detection
+[33m7273cd7[m Implement temporal context and diagnostic weighting
+[33m76b3980[m Fix inconsistent chatbot response and improve symptom handling
+[33m3fe2a97[m Improve NLP extraction and handling of natural language symptom inputs
+[33m6a63adc[m Improve New Chat UX: modal + reset message refinement
+[33m4868b2f[m Merge pull request #62 from harshithareddy007/fix-noise-filtering
+[33m027a23c[m Improve UX for mixed valid/invalid input handling
+[33m618b66f[m Merge pull request #60 from Praptii21/feature/11-semantic-chunking
+[33m0cfad69[m feat(rag): implement semantic text chunking with overlap
+[33mbf5308d[m Merge pull request #58 from harshithareddy007/main
+[33m9fcb08f[m Remove log files from tracking
+[33ma36dc9a[m Fix duplicate sessionId declaration causing input issues
+[33me4fe1e7[m Merge pull request #56 from Praptii21/fix/server-side-session-state
+[33mbfc7ceb[m Merge branch 'main' of https://github.com/Praptii21/symptom-assist into fix/server-side-session-state
+[33m6056fee[m fix: implement server-side session management to prevent symptom state loss
+[33mbc7f5e7[m Update README.md
+[33mdf914d1[m Merge pull request #41 from audhee/feature/readme-enhancement
+[33m5d48d84[m Merge pull request #55 from SandstromPL/sandy-branch
+[33m23c517b[m Merge branch 'main' into sandy-branch
+[33m86287f3[m fix: Use CDN asset and remove vendored library directory
+[33m0bb36a4[m feat(ui): add resizable split pane for chat and diagnostics
+[33maffc18a[m Merge pull request #48 from ameyvaidya44/feat/server-side-session-store
+[33m2704290[m Merge pull request #52 from aniket866/add-nsoc-labeller
+[33md268616[m Update NsocLabeller.yml
+[33m995d9c8[m Merge pull request #50 from mrunali-patil23/feature/dark-mode
+[33ma361aff[m fix: resolve merge conflict for dark mode
+[33m839f57c[m Add NSOC workflow 1777028879.2324166
+[33mc4c8149[m feat: add dark mode with full UI consistency
+[33mb49996b[m feat: server-side session store for symptom timeline
+[33m38e0300[m Merge pull request #44 from CrepuscularIRIS/feat/markdown-rendering-chat
+[33m931ff82[m Merge pull request #45 from mrunali-patil23/feature/medical-dataset-expansion
+[33m04dd379[m docs: add before/after screenshots for markdown rendering PR
+[33mca24877[m docs: add before/after screenshots for markdown rendering PR
+[33m8ee84bb[m feat: expand medical dataset with new conditions
+[33mc8a46c2[m test: add HTML verification tests for markdown rendering dependencies
+[33m5287877[m feat: implement markdown rendering for bot chat messages
+[33m5d6f033[m Merge pull request #36 from Muskankr/add-docstrings-nlp-extractor
+[33m24530f3[m docs: fix markdown formatting and headings
+[33m5b7494a[m chore: updated the readme structure and added screenshots, added logs to  gitignore for cleaner repo
+[33m4781412[m Fix: add return in _auto_synonyms and improve docstring
+[33m7957d71[m Merge pull request #34 from ameyvaidya44/fix/early-exit-symptom-matching
+[33m8e9fab5[m Merge branch 'main' into fix/early-exit-symptom-matching
+[33maef815f[m fix: correct duplicate check and clarify substring matching loop
+[33m2dc2f5d[m Merge pull request #30 from Dipanita45/main
+[33m9071ead[m Added inline  docstrings to nlp_extractor.py
+[33m501f00c[m Update Security.md
+[33m44409e6[m Merge pull request #28 from DivyaJain-DataAnalyst/main
+[33mdeef286[m fix: remove early exit in symptom node matching loop
+[33m1dc4cba[m Merge pull request #29 from avisingh-6060/fix/traversal-bug
+[33mc379bff[m Create Security.md
+[33m770eee9[m Fix BFS traversal to handle multiple symptom matches and remove premature break causing incomplete results
+[33m6798ff1[m Add License.md
+[33mb5bee2d[m Add License
+[33m83727af[m Merge pull request #25 from shambhavivartika06-cmyk/shambhavivartika06-cmyk-patch-1
+[33m37a3eff[m Merge pull request #26 from Praptii21/fix/negation-dependency-parsing
+[33md289d12[m Merge branch 'main' into fix/negation-dependency-parsing
+[33m7533316[m Resolve merge conflicts between negation parsing and fuzzy matching
+[33m78a5fbd[m Fix negation detection for 'deny' verbs
+[33mbeff965[m Replace character-window negation with spaCy dependency parsing
+[33m23fa94d[m Add .env.example and update README with setup instructions
+[33m7598356[m Add .env.example file
+[33mefc2ef9[m Merge pull request #21 from SHUBHAM2775/feature/upgrade-rag-semantics
+[33m58c27a8[m Upgrade RAG pipeline
+[33mf0cc137[m Merge pull request #15 from ameyvaidya44/feature/fuzzy-symptom-matching
+[33me656cbf[m Merge pull request #18 from harshal-paltse/fix/improve-groq-error-handling
+[33m53a50f6[m Fix: Improve Groq API error handling with retry logic and user-friendly messages
+[33m2341d99[m feat: add fuzzy matching for symptom extraction via rapidfuzz
+[33m4c3da10[m Merge pull request #7 from sanikaspj07-crypto/issue-6-bug-fix
+[33ma4b813e[m Fix: added explicit SVG dimensions and viewBox for Firefox rendering
+[33m41aa647[m Update CONTRIBUTING.md
+[33mb12de65[m Merge pull request #5 from SandstromPL/sandy-branch
+[33m4a885a6[m feat: sequentital orange edges are visible and highlight edges on reaching threshold
+[33m35f67ba[m feat(graph): improve readability and add explicit sequential reasoning journey
+[33m6a1524f[m Merge pull request #4 from DivyaJain-DataAnalyst/main
+[33ma38a188[m Update README.md
+[33mc4e8bb3[m Add Code Of Conduct.md
+[33mf8d758a[m Add CodeOfConduct.md
+[33m7f91b96[m Fix formatting in README sections
+[33m7431bf0[m Update pull request instructions in CONTRIBUTING.md
+[33m25c27d5[m Initial commit: AI symptom analysis system (clean)

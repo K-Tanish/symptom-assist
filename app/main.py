@@ -23,12 +23,13 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from groq import AsyncGroq
 from dotenv import load_dotenv
 import logging
+import textwrap
 
 from .core.error_handler import APIErrorHandler, retry_with_backoff
 from .logging_config import setup_logging
@@ -51,6 +52,7 @@ from app.core.nlp_extractor import SymptomExtractor
 # ---------------------------------------------------------------------------
 load_dotenv(_PROJECT_ROOT / ".env", override=True)
 load_dotenv()
+load_dotenv(override=True)
 setup_logging(log_dir="logs", level=logging.INFO)
 
 
@@ -106,17 +108,18 @@ _DOCS_CSV     = str(_PROJECT_ROOT / "data" / "medical_docs.csv")
 # Initialise AI components at startup
 # ---------------------------------------------------------------------------
 
-print("[startup] Building knowledge graph from CSV...")
+logging.info("[startup] Building knowledge graph from CSV...")
 GRAPH = load_graph_from_csv(_SYMPTOM_CSV)
-print("[startup] Initialising RAG pipeline from CSV...")
+logging.info("[startup] Initialising RAG pipeline from CSV...")
 RAG = RAGPipeline(csv_path=_DOCS_CSV)
-print("[startup] Loading NLP extractor (dynamic lexicon from CSV)...")
+logging.info("[startup] Loading NLP extractor (dynamic lexicon from CSV)...")
 NLP = SymptomExtractor(csv_path=_SYMPTOM_CSV)
 if get_groq_api_key():
     print("[startup] Groq client ready.")
 else:
     print("[startup] GROQ_API_KEY missing. Running in fallback mode without LLM.")
 print("[startup] Groq client ready.")
+logging.info("[startup] Groq client ready.")
 GROQ = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
 
 # ---------------------------------------------------------------------------
@@ -358,6 +361,82 @@ def build_clinical_summary_text(
     return "\n".join(lines)
 
 
+def _escape_pdf_text(text: str) -> str:
+    return text.replace('\\', '\\\\').replace('(', '\\(').replace(')', '\\)')
+
+
+def _build_pdf_pages(lines: list[str], page_width: int = 595, page_height: int = 842, margin_left: int = 40, margin_top: int = 40, line_height: int = 14):
+    lines_per_page = int((page_height - 2 * margin_top) / line_height)
+    pages = []
+    for page_start in range(0, len(lines), lines_per_page):
+        page_lines = lines[page_start:page_start + lines_per_page]
+        content = ["BT", "/F1 12 Tf"]
+        y = page_height - margin_top
+        for line in page_lines:
+            escaped = _escape_pdf_text(line)
+            content.append(f"1 0 0 1 {margin_left} {y} Tm")
+            content.append(f"({escaped}) Tj")
+            y -= line_height
+        content.append("ET")
+        pages.append("\n".join(content))
+    return pages
+
+
+def build_pdf_bytes(text: str) -> bytes:
+    lines = []
+    for raw_line in text.splitlines():
+        wrapped = textwrap.wrap(raw_line, width=90) or [""]
+        lines.extend(wrapped)
+    pages = _build_pdf_pages(lines)
+
+    objects = []
+    def add_object(content: str) -> int:
+        objects.append(content)
+        return len(objects)
+
+    catalog_id = add_object("<< /Type /Catalog /Pages 2 0 R >>")
+    pages_id = add_object("<< /Type /Pages /Kids [3 0 R] /Count {} >>".format(len(pages)))
+    page_ids = []
+    content_ids = []
+    for page in pages:
+        content_id = add_object(f"<< /Length {len(page.encode('latin1'))} >>\nstream\n{page}\nendstream")
+        content_ids.append(content_id)
+    for content_id in content_ids:
+        page_id = add_object(
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] /Contents {content_id} 0 R /Resources <</Font <</F1 5 0 R>>>> >>"
+        )
+        page_ids.append(page_id)
+    font_id = add_object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+
+    # Rebuild pages object with correct kid refs
+    pages_obj = f"<< /Type /Pages /Kids [{' '.join(f'{pid} 0 R' for pid in page_ids)}] /Count {len(page_ids)} >>"
+    objects[1] = pages_obj
+
+    xref_offset = 0
+    body = []
+    offsets = []
+    for idx, obj in enumerate(objects, start=1):
+        offsets.append(xref_offset)
+        obj_text = f"{idx} 0 obj\n{obj}\nendobj\n"
+        body.append(obj_text)
+        xref_offset += len(obj_text.encode('latin1'))
+
+    xref_start = xref_offset
+    xref = ["xref", f"0 {len(objects) + 1}", "0000000000 65535 f "]
+    for offset in offsets:
+        xref.append(f"{offset:010d} 00000 n ")
+    trailer = [
+        "trailer",
+        f"<< /Size {len(objects) + 1} /Root 1 0 R >>",
+        "startxref",
+        str(xref_start),
+        "%%EOF"
+    ]
+
+    pdf = ["%PDF-1.3", "%âãÏÓ"] + body + xref + trailer
+    return "\n".join(pdf).encode('latin1')
+
+
 # ---------------------------------------------------------------------------
 # Chat endpoint
 # ---------------------------------------------------------------------------
@@ -380,6 +459,10 @@ async def call_groq_api(messages: list, model: str = "llama-3.1-8b-instant") -> 
     Raises:
         Various exceptions with user-friendly handling
     """
+    if os.getenv("GROQ_API_KEY") == "gsk_dummy_key_for_testing_pdf_export":
+        # Mock responder for testing without a real API key
+        return "I have received your symptom report. Based on our analysis, we have updated your clinical summary. You can now view it by clicking the 'SUMMARY' button at the top of the page."
+
     chat_completion = await GROQ.chat.completions.create(
         model=model,
         messages=messages,
@@ -498,7 +581,11 @@ async def chat(request: ChatRequest):
         all_symptoms_detailed = [{"symptom": k, "status": v} for k, v in tagged_dict.items()]
 
         # --- Step 2: Red flag check ---
-        red_flags = check_red_flags(GRAPH, all_symptom_names)
+        safe_symptoms = [
+            s for s in all_symptom_names
+            if s not in extraction.negated
+        ]
+        red_flags = check_red_flags(GRAPH, safe_symptoms)
 
         # --- Step 3: BFS graph traversal ---
         candidates = traverse_graph(GRAPH, all_symptoms_data)
@@ -618,8 +705,8 @@ async def chat(request: ChatRequest):
     except Exception as overall_e:
         import traceback
         err_msg = traceback.format_exc()
-        print("CRITICAL ERROR IN /chat ENDPOINT:")
-        print(err_msg)
+        logging.error("CRITICAL ERROR IN /chat ENDPOINT:")
+        logging.error(err_msg)
         APIErrorHandler.log_error(overall_e, "Critical error in /chat endpoint")
         with open("error_log.txt", "w", encoding="utf-8") as f:
             f.write(err_msg)
@@ -691,6 +778,40 @@ async def get_summary(session_id: str):
             "red_flags": red_flags,
             "rag_sources": rag_sources
         }
+    )
+
+
+@app.get("/summary/{session_id}/pdf")
+async def get_summary_pdf(session_id: str):
+    """Returns the clinical summary as a downloadable PDF."""
+    if session_id not in SESSION_STORE:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+
+    session_data = SESSION_STORE[session_id]
+    symptoms = session_data["symptoms"]
+    if not symptoms:
+        summary_text = "No symptoms recorded yet. Please describe your symptoms in the chat first."
+    else:
+        all_symptom_names = [s["name"] for s in symptoms]
+        red_flags = check_red_flags(GRAPH, all_symptom_names)
+        candidates = traverse_graph(GRAPH, symptoms)
+        combined_query = ", ".join(all_symptom_names)
+        rag_raw = RAG.retrieve_raw(combined_query, top_k=3)
+        rag_sources = [doc["title"] for doc in rag_raw]
+        summary_text = build_clinical_summary_text(
+            symptoms=symptoms,
+            candidates=candidates,
+            red_flags=red_flags,
+            rag_sources=rag_sources
+        )
+
+    pdf_bytes = build_pdf_bytes(summary_text)
+    filename = f"SymptomAssist_Clinical_Summary_{session_id[:8]}.pdf"
+    content_disposition = f'attachment; filename="{filename}"; filename*=UTF-8\'\'{filename}'
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": content_disposition}
     )
 
 
@@ -806,7 +927,8 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8080)
     uvicorn.run(
-        app,
+        "app.main:app",
         host=os.getenv("HOST", "127.0.0.1"),
         port=int(os.getenv("PORT", "8000")),
+        reload=True if os.getenv("DEBUG") == "True" else False
     )

@@ -19,6 +19,8 @@ import math
 import os
 import re
 from collections import defaultdict
+import hashlib
+import json
 
 
 # ---------------------------------------------------------------------------
@@ -36,9 +38,9 @@ def load_documents_from_csv(csv_path: str) -> list[dict]:
     documents: list[dict] = []
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        for row in reader:
+        for i, row in enumerate(reader):
             documents.append({
-                "id":        f"doc_{row['condition'].strip()}",
+                "id":        f"doc_{row['condition'].strip()}_{i}",
                 "condition": row["condition"].strip(),
                 "title": (row.get("title") or "").strip(),
                 "content": (row.get("content") or "").strip(),
@@ -91,13 +93,27 @@ class SemanticRetriever:
         Processes documents by splitting them into chunks and embedding each chunk.
         Uses ChromaDB for persistence and vector storage.
         """
-        if self.collection.count() > 0:
-            print(f"[RAG] ChromaDB already contains {self.collection.count()} chunks. Skipping indexing.")
+        csv_hash = hashlib.md5(
+            json.dumps([d["id"] for d in documents], sort_keys=True).encode()
+        ).hexdigest()
+
+        stored_hash = (self.collection.metadata or {}).get("csv_hash")
+
+        if self.collection.count() > 0 and stored_hash == csv_hash:
+            print(f"[RAG] ChromaDB up to date ({self.collection.count()} chunks). Skipping indexing.")
             return
+        elif self.collection.count() > 0:
+            print("[RAG] CSV changed — rebuilding index...")
+            self.chroma_client.delete_collection("medical_docs")
+            self.collection = self.chroma_client.get_or_create_collection(
+                name="medical_docs",
+                metadata={"csv_hash": csv_hash}
+            )
 
         ids = []
         texts_to_embed = []
         metadatas = []
+        seen_ids = set()
 
         for doc in documents:
             content = doc.get("content", "")
@@ -108,6 +124,11 @@ class SemanticRetriever:
             
             for i, chunk_text in enumerate(doc_chunks):
                 chunk_id = f"{doc['id']}_chunk_{i}"
+                
+                # Deduplicate within this batch
+                if chunk_id in seen_ids:
+                    continue
+                seen_ids.add(chunk_id)
                 
                 # We need to embed title + content for better semantic matching
                 embed_text = f"{title}: {chunk_text}"
@@ -207,11 +228,29 @@ class RAGPipeline:
         self.retriever = SemanticRetriever()
         self.retriever.index(documents)
 
-    def retrieve_context(self, query: str, top_k: int = 3) -> str:
-        """Return formatted context string for the LLM prompt."""
+    def retrieve_context(self, query: str, top_k: int = 3, min_score: float = 0.3) -> str:
+        """
+        Return formatted context string for the LLM prompt.
+        
+        Args:
+            query: User's symptom description
+            top_k: Maximum number of documents to retrieve
+            min_score: Minimum relevance score threshold (0.0 to 1.0).
+                      Documents below this score are excluded to prevent
+                      low-quality context reaching the LLM.
+        
+        Returns:
+            str: Formatted context string, or empty string if nothing relevant found.
+        """
         docs = self.retriever.retrieve(query, top_k=top_k)
         if not docs:
             return ""
+        
+        # Filter out low relevance chunks
+        docs = [doc for doc in docs if doc["relevance_score"] >= min_score]
+        if not docs:
+            return ""
+        
         parts = [f"[{doc['title']}]\n{doc['content']}" for doc in docs]
         return "\n\n---\n\n".join(parts)
 

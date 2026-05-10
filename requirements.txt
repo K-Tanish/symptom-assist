@@ -4,7 +4,7 @@ uvicorn[standard]>=0.29.0
 python-dotenv>=1.0.0
 
 # For production-grade RAG (upgrade from TF-IDF):
-sentence-transformers
+# sentence-transformers
 scipy
 chromadb
 # ── LLM Client ────────────────────────────────────────────────────────────────

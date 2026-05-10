@@ -1115,6 +1115,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/split.js/dist/split.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
@@ -1586,7 +1587,7 @@
               <span class="severity sev-${c.severity}">${c.severity}</span>
     <div id="summaryModal" class="modal">
       <div class="modal-box">
-        <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <h3 class="summary-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           Visit-Ready Summary
         </h3>
@@ -1594,6 +1595,7 @@
         <div class="summary-actions">
           <button class="btn-secondary" id="closeSummaryBtn">Close</button>
           <button class="btn-secondary" id="copySummaryBtn">Copy to Clipboard</button>
+          <button class="btn-secondary" id="downloadPdfBtn">Download PDF</button>
           <button class="btn-primary" id="printSummaryBtn">Print Summary</button>
         </div>
       </div>
@@ -1753,53 +1755,19 @@
 
 </html>
           <div style="display: flex; align-items: center; gap: 12px">
+          <div class="header-controls">
             <!-- 🌙 Theme Toggle -->
-            <button
-              id="theme-toggle"
-              style="
-                background: #e2e8f0;
-                border: none;
-                padding: 8px 12px;
-                border-radius: 10px;
-                cursor: pointer;
-              "
-            >
+            <button id="theme-toggle">
               🌙
             </button>
 
             <!-- Summary Button -->
-            <button
-              id="viewSummaryBtn"
-              style="
-                background: rgba(15, 118, 110, 0.1);
-                color: var(--primary);
-                border: 1px solid rgba(15, 118, 110, 0.2);
-                padding: 8px 14px;
-                border-radius: 10px;
-                font-size: 11px;
-                font-weight: 700;
-                cursor: pointer;
-                transition: all 0.2s;
-              "
-            >
+            <button id="viewSummaryBtn">
               SUMMARY
             </button>
 
             <!-- New Chat Button -->
-            <button
-              id="newChatBtn"
-              style="
-                background: rgba(15, 118, 110, 0.1);
-                color: var(--primary);
-                border: 1px solid rgba(15, 118, 110, 0.2);
-                padding: 8px 14px;
-                border-radius: 10px;
-                font-size: 11px;
-                font-weight: 700;
-                cursor: pointer;
-                transition: all 0.2s;
-              "
-            >
+            <button id="newChatBtn">
               NEW CHAT
             </button>
             <div class="status-indicator">
@@ -1812,6 +1780,17 @@
         <div id="chat-area"></div>
 
         <footer>
+
+          <!-- Symptom Suggestion Chips -->
+          <div id="suggestion-chips">
+            <button class="chip" onclick="sendChip('Fever and dry cough')"> Fever and dry cough</button>
+            <button class="chip" onclick="sendChip('Sore throat, runny nose, and sneezing')"> Sore throat, runny nose, and sneezing</button>
+            <button class="chip" onclick="sendChip('Severe headache with sensitivity to light')"> Severe headache with sensitivity to light</button>
+            <button class="chip" onclick="sendChip('Lower back pain and morning stiffness')"> Lower back pain and morning stiffness</button>
+            <button class="chip" onclick="sendChip('Stomach bloating and abdominal pain')"> Stomach bloating and abdominal pain</button>
+          </div>
+
+
           <div class="input-wrapper">
             <input
               id="input"
@@ -1964,12 +1943,8 @@
           </div>
 
           <!-- Red Flags Card -->
-          <div
-            class="card"
-            id="card-redflags"
-            style="display: none; border-color: #fee2e2; background: #fefce8"
-          >
-            <div class="card-label" style="color: #dc2626">
+          <div class="card priority-redflags" id="card-redflags">
+            <div class="card-label">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -1989,43 +1964,15 @@
         </div>
 
         <!-- TAB 2: Traversal Graph -->
-        <div
-          id="panel-graph"
-          class="tab-panel"
-          style="
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-            background: #f8fafc;
-          "
-        >
-          <div
-            id="graph-panel"
-            style="
-              width: 100%;
-              height: 100%;
-              overflow: hidden;
-              position: relative;
-            "
-          >
+        <div id="panel-graph" class="tab-panel graph-tab-panel">
+          <div id="graph-panel" class="graph-container-inner">
             <svg
               id="graph-svg"
               width="800"
               height="600"
               viewBox="0 0 800 600"
             ></svg>
-            <div
-              id="graph-empty-hint"
-              style="
-                position: absolute;
-                inset: 0;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                pointer-events: none;
-              "
-            >
+            <div id="graph-empty-hint" class="graph-empty-overlay">
               <svg
                 width="48"
                 height="48"
@@ -2037,47 +1984,82 @@
                 <circle cx="12" cy="12" r="9" />
                 <path d="M12 8v4l3 3" />
               </svg>
-              <p
-                style="
-                  color: #94a3b8;
-                  font-size: 13px;
-                  margin-top: 12px;
-                  text-align: center;
-                  line-height: 1.6;
-                "
-              >
+              <p class="graph-empty-text">
                 Graph builds as you chat.<br />Send a symptom description to
                 begin traversal.
               </p>
             </div>
-            <div id="graph-legend" style="bottom: 10px">
+            <div id="graph-legend" class="graph-legend-bottom">
               <div class="legend-item">
-                <div class="legend-dot" style="background: #3b82f6"></div>
+                <div class="legend-dot dot-symptom"></div>
                 Symptom (input)
               </div>
               <div class="legend-item">
-                <div class="legend-dot" style="background: #0d9488"></div>
+                <div class="legend-dot dot-condition"></div>
                 Condition (output)
               </div>
               <div class="legend-item">
-                <div
-                  class="legend-dot"
-                  style="
-                    background: #f59e0b;
-                    width: 30px;
-                    height: 3px;
-                    border-radius: 1px;
-                  "
-                ></div>
+                <div class="legend-dot dot-traversal"></div>
                 Traversal edge
               </div>
             </div>
-            <div id="graph-stats" style="top: 10px; bottom: auto">
+            <div id="graph-stats" class="graph-stats-top">
               Traversal Graph — awaiting input
             </div>
           </div>
         </div>
       </aside>
+    </div>
+
+    <!-- Hidden Template for PDF Export -->
+    <div id="pdf-export-container" class="off-screen">
+      <div id="clinical-report-template" class="clinical-report">
+        <div class="report-header">
+          <div class="report-brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="30" height="30">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+            <div class="report-title-group">
+              <h1 class="report-main-title">SymptomAssist AI</h1>
+              <p class="report-sub-title">Visit-Ready Clinical Summary Report</p>
+            </div>
+          </div>
+          <div class="report-meta">
+            <p><strong>Generated:</strong> <span id="pdf-gen-date"></span></p>
+            <p><strong>Session ID:</strong> <span id="pdf-session-id"></span></p>
+          </div>
+        </div>
+
+        <div class="report-disclaimer">
+          <strong>MEDICAL DISCLAIMER:</strong> This document was generated by SymptomAssist, an AI-powered educational tool. It is NOT a medical record or diagnosis. It is intended to help a patient communicate symptoms to a healthcare professional. Do not use this to self-diagnose or delay seeking professional care.
+        </div>
+
+        <div id="pdf-red-flags" class="report-section urgent-section urgent-flags-hidden">
+          <h2 class="section-title">⚠️ URGENT: Red Flags Detected</h2>
+          <div id="pdf-rf-list" class="report-content"></div>
+        </div>
+
+        <div class="report-section">
+          <h2 class="section-title">Patient Reported Symptoms</h2>
+          <div id="pdf-symptom-list" class="report-content"></div>
+        </div>
+
+        <div class="report-section">
+          <h2 class="section-title">AI Knowledge Graph Analysis</h2>
+          <p class="section-hint">Matches found in structured medical graph (ordered by traversal score). These are NOT diagnoses.</p>
+          <div id="pdf-condition-list" class="report-content"></div>
+        </div>
+
+        <div class="report-section">
+          <h2 class="section-title">Educational Context & Sources</h2>
+          <div id="pdf-source-list" class="report-content"></div>
+        </div>
+
+        <div class="report-footer">
+          <p>Generated by SymptomAssist Cognitive Health Advisor</p>
+          <p>© 2026 SymptomAssist AI Research Team</p>
+        </div>
+      </div>
     </div>
 
     <script src="/static/app.js"></script>

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 2026-05-01 13:48:48,814 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [unknown] Critical error in /chat endpoint: NameError: name 'prior_symptoms' is not defined
 Traceback (most recent call last):
   File "C:\Users\Harshitha Reddy\OneDrive\Desktop\Sympton assist\symptom-assist\app\main.py", line 326, in chat
@@ -16,3 +17,407 @@ Traceback (most recent call last):
     top_conditions.append({
     ^^^^^^^^^^^^^^
 NameError: name 'top_conditions' is not defined. Did you mean: 'top_condition'?
+2026-05-02 14:45:41,573 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [authentication] Attempt 1/3: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\core\error_handler.py", line 156, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 252, in call_groq_api
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+    ...<2 lines>...
+        temperature=0.3,
+    )
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ~~~~~~~~~~^
+        "/openai/v1/chat/completions",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<45 lines>...
+        stream_cls=Stream[ChatCompletionChunk],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1280, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1067, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-02 14:45:41,636 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [authentication] Groq API call failed in /chat endpoint: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 414, in chat
+    reply = call_groq_api(messages)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\core\error_handler.py", line 156, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 252, in call_groq_api
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+    ...<2 lines>...
+        temperature=0.3,
+    )
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ~~~~~~~~~~^
+        "/openai/v1/chat/completions",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<45 lines>...
+        stream_cls=Stream[ChatCompletionChunk],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1280, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1067, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-02 14:49:31,823 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [authentication] Attempt 1/3: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\core\error_handler.py", line 156, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 252, in call_groq_api
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+    ...<2 lines>...
+        temperature=0.3,
+    )
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ~~~~~~~~~~^
+        "/openai/v1/chat/completions",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<45 lines>...
+        stream_cls=Stream[ChatCompletionChunk],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1280, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1067, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-02 14:49:31,829 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [authentication] Groq API call failed in /chat endpoint: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 414, in chat
+    reply = call_groq_api(messages)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\core\error_handler.py", line 156, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 252, in call_groq_api
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+    ...<2 lines>...
+        temperature=0.3,
+    )
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ~~~~~~~~~~^
+        "/openai/v1/chat/completions",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<45 lines>...
+        stream_cls=Stream[ChatCompletionChunk],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1280, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1067, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-02 14:50:00,869 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [authentication] Attempt 1/3: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\core\error_handler.py", line 156, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 252, in call_groq_api
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+    ...<2 lines>...
+        temperature=0.3,
+    )
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ~~~~~~~~~~^
+        "/openai/v1/chat/completions",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<45 lines>...
+        stream_cls=Stream[ChatCompletionChunk],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1280, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1067, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-02 14:50:00,876 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [authentication] Groq API call failed in /chat endpoint: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 414, in chat
+    reply = call_groq_api(messages)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\core\error_handler.py", line 156, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 252, in call_groq_api
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+    ...<2 lines>...
+        temperature=0.3,
+    )
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ~~~~~~~~~~^
+        "/openai/v1/chat/completions",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<45 lines>...
+        stream_cls=Stream[ChatCompletionChunk],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1280, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1067, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-02 15:02:11,762 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [authentication] Attempt 1/3: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\core\error_handler.py", line 156, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 252, in call_groq_api
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+    ...<2 lines>...
+        temperature=0.3,
+    )
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ~~~~~~~~~~^
+        "/openai/v1/chat/completions",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<45 lines>...
+        stream_cls=Stream[ChatCompletionChunk],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1280, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1067, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-02 15:02:11,777 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [authentication] Groq API call failed in /chat endpoint: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 414, in chat
+    reply = call_groq_api(messages)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\core\error_handler.py", line 156, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 252, in call_groq_api
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+    ...<2 lines>...
+        temperature=0.3,
+    )
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ~~~~~~~~~~^
+        "/openai/v1/chat/completions",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<45 lines>...
+        stream_cls=Stream[ChatCompletionChunk],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1280, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1067, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-02 15:03:20,136 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [authentication] Attempt 1/3: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\core\error_handler.py", line 156, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 252, in call_groq_api
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+    ...<2 lines>...
+        temperature=0.3,
+    )
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ~~~~~~~~~~^
+        "/openai/v1/chat/completions",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<45 lines>...
+        stream_cls=Stream[ChatCompletionChunk],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1280, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1067, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-02 15:03:20,142 - app.core.error_handler - ERROR - [error_handler.py:123] - API Error [authentication] Groq API call failed in /chat endpoint: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 414, in chat
+    reply = call_groq_api(messages)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\core\error_handler.py", line 156, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Tanish\Desktop\OPEN_SRC\symptom-assist\app\main.py", line 252, in call_groq_api
+    chat_completion = GROQ.chat.completions.create(
+        model=model,
+    ...<2 lines>...
+        temperature=0.3,
+    )
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ~~~~~~~~~~^
+        "/openai/v1/chat/completions",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<45 lines>...
+        stream_cls=Stream[ChatCompletionChunk],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1280, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tanish\AppData\Local\Programs\Python\Python313\Lib\site-packages\groq\_base_client.py", line 1067, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+=======
+2026-05-07 20:22:52,399 - app.core.error_handler - ERROR - [error_handler.py:124] - API Error [authentication] Attempt 1/3: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\core\error_handler.py", line 158, in async_wrapper
+    return await func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\main.py", line 308, in call_groq_api
+    chat_completion = await GROQ.chat.completions.create(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\resources\chat\completions.py", line 941, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\_base_client.py", line 1856, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\_base_client.py", line 1655, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-07 20:22:52,404 - app.core.error_handler - ERROR - [error_handler.py:124] - API Error [authentication] Groq API call failed in /chat endpoint: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\main.py", line 471, in chat
+    reply = await call_groq_api(messages)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\core\error_handler.py", line 158, in async_wrapper
+    return await func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\main.py", line 308, in call_groq_api
+    chat_completion = await GROQ.chat.completions.create(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\resources\chat\completions.py", line 941, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\_base_client.py", line 1856, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\_base_client.py", line 1655, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-07 20:35:35,222 - app.core.error_handler - ERROR - [error_handler.py:124] - API Error [authentication] Attempt 1/3: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\core\error_handler.py", line 158, in async_wrapper
+    return await func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\main.py", line 308, in call_groq_api
+    chat_completion = await GROQ.chat.completions.create(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\resources\chat\completions.py", line 941, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\_base_client.py", line 1856, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\_base_client.py", line 1655, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-07 20:35:35,224 - app.core.error_handler - ERROR - [error_handler.py:124] - API Error [authentication] Groq API call failed in /chat endpoint: AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\main.py", line 471, in chat
+    reply = await call_groq_api(messages)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\core\error_handler.py", line 158, in async_wrapper
+    return await func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\main.py", line 308, in call_groq_api
+    chat_completion = await GROQ.chat.completions.create(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\resources\chat\completions.py", line 941, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\_base_client.py", line 1856, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\groq\_base_client.py", line 1655, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.AuthenticationError: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}
+2026-05-07 20:37:22,334 - app.core.error_handler - ERROR - [error_handler.py:124] - API Error [unknown] Critical error in /chat endpoint: OSError: [Errno 22] Invalid argument
+Traceback (most recent call last):
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\main.py", line 447, in chat
+    rag_context = RAG.retrieve_context(latest_user_msg, top_k=2)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\core\rag_pipeline.py", line 218, in retrieve_context
+    docs = self.retriever.retrieve(query, top_k=top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\core\rag_pipeline.py", line 151, in retrieve
+    query_embedding = self.model.encode(query).tolist()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\torch\utils\_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sentence_transformers\util\decorators.py", line 41, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sentence_transformers\sentence_transformer\model.py", line 642, in encode
+    for start_index in trange(0, len(inputs_sorted), batch_size, desc="Batches", disable=not show_progress_bar):
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\tqdm\std.py", line 1524, in trange
+    return tqdm(range(*args), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\tqdm\std.py", line 1096, in __init__
+    self.sp = self.status_printer(self.fp)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\tqdm\std.py", line 448, in status_printer
+    getattr(sys.stderr, 'flush', lambda: None)()
+OSError: [Errno 22] Invalid argument
+2026-05-07 20:37:32,452 - app.core.error_handler - ERROR - [error_handler.py:124] - API Error [unknown] Critical error in /chat endpoint: OSError: [Errno 22] Invalid argument
+Traceback (most recent call last):
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\main.py", line 447, in chat
+    rag_context = RAG.retrieve_context(latest_user_msg, top_k=2)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\core\rag_pipeline.py", line 218, in retrieve_context
+    docs = self.retriever.retrieve(query, top_k=top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\OneDrive\Desktop\symptom-assist\app\core\rag_pipeline.py", line 151, in retrieve
+    query_embedding = self.model.encode(query).tolist()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\torch\utils\_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sentence_transformers\util\decorators.py", line 41, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sentence_transformers\sentence_transformer\model.py", line 642, in encode
+    for start_index in trange(0, len(inputs_sorted), batch_size, desc="Batches", disable=not show_progress_bar):
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\tqdm\std.py", line 1524, in trange
+    return tqdm(range(*args), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\tqdm\std.py", line 1096, in __init__
+    self.sp = self.status_printer(self.fp)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\KIIT\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\tqdm\std.py", line 448, in status_printer
+    getattr(sys.stderr, 'flush', lambda: None)()
+OSError: [Errno 22] Invalid argument
+>>>>>>> 6cfc28636f5ded8ffb156725d27a69a127832b13
