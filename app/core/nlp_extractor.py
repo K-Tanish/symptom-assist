@@ -82,7 +82,7 @@ _MANUAL_SYNONYMS: dict[str, list[str]] = {
                                "burns when i urinate", "pain urinating"],
     "frequent urination":     ["frequent urination", "urinating often", "need to urinate often",
                                "peeing a lot", "going to toilet often", "urgency to urinate",
-                               "going bathroom often"],
+                               "going bathroom often", "urinating frequently", "peeing frequently"],
     "body aches":             ["body aches", "muscle aches", "all over aches", "aching",
                                "sore all over", "body pain", "aching body"],
     "back pain":              ["back pain", "backache", "back ache", "lower back pain",
@@ -107,7 +107,7 @@ _MANUAL_SYNONYMS: dict[str, list[str]] = {
     "watery eyes":            ["watery eyes", "eyes watering", "tearing", "tears"],
     "blurred vision":         ["blurred vision", "blurry vision", "vision blurred", "fuzzy vision"],
     "thirst":                 ["thirsty", "thirst", "very thirsty", "drinking lots", "increased thirst"],
-    "frequent urination":     ["frequent urination", "urinating frequently", "peeing frequently"],
+
     "weight loss":            ["losing weight", "weight loss", "lost weight unintentionally", "unexplained weight loss"],
     "weight gain":            ["weight gain", "gaining weight", "putting on weight"],
     "trembling":              ["trembling", "shaking", "tremor", "hands shaking", "shaky"],

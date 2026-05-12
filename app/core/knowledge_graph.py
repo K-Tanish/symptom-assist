@@ -189,7 +189,7 @@ def traverse_graph(G: nx.DiGraph, symptoms: list) -> list[dict]:
             processed_symptoms.append(s)
 
     # -- Step 1: Match user symptoms to graph symptom nodes --
-    matched_nodes: list[str] = []
+    matched_nodes: list[tuple[str, int | None]] = []
     matched_set: set[str] = set()   # tracks already-added nodes for O(1) dedup
     unmatched: list[str] = []
 
@@ -214,71 +214,44 @@ def traverse_graph(G: nx.DiGraph, symptoms: list) -> list[dict]:
             unmatched.append(u)
 
 
-        matched_nodes = list(set(matched_nodes))
-
     if not matched_nodes:
         return []
 
-    # -- Step 2 & 3: BFS traversal --
+    # -- Step 2 & 3: Traverse matched symptom -> condition edges --
     condition_scores: dict[str, float] = defaultdict(float)
-    # NEW: Track contribution of each symptom per condition
     symptom_contribution: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     traversal_path: list[dict] = []       # records each step taken
-    visited: set[str] = set()
+    visited_edges: set[tuple[str, str]] = set()
 
-    # Create a lookup for patient onset order
-    patient_onset = {node: order for node, order in matched_nodes if order is not None}
-    
-    # Enqueue nodes for BFS
-    queue: deque[str] = deque([node for node, _ in matched_nodes])
-    for n, _ in matched_nodes:
-        visited.add(n)
-
-    while queue:
-        current = queue.popleft()
-        
-        # Determine current symptom's reported order (if any)
-        current_patient_order = patient_onset.get(current)
-
+    for current, current_patient_order in matched_nodes:
         for _, neighbour, edge_data in G.out_edges(current, data=True):
             if edge_data.get("edge_type") != "SUGGESTS":
                 continue
-            if neighbour in visited:
+            if (current, neighbour) in visited_edges:
                 continue
-            visited.add(neighbour)
+            visited_edges.add((current, neighbour))
 
             weight = edge_data.get("weight", 1.0)
-            
+
             # --- TEMPORAL WEIGHTING LOGIC ---
-            # If both have order info, compare them.
-            # We look for other symptoms already 'processed' for this condition
-            # or we just check if this symptom's order matches the condition's textbook order.
-            
             textbook_order = edge_data.get("onset_index", 99)
-            
-            # Simple heuristic: if patient_order matches textbook_order (relative rank),
-            # give a small multiplier.
             temporal_multiplier = 1.0
             if current_patient_order is not None:
-                # If it's the 1st symptom in both, or both are 'early', etc.
                 if current_patient_order == textbook_order:
                     temporal_multiplier = 1.25  # Strong match
                 elif abs(current_patient_order - textbook_order) <= 1:
                     temporal_multiplier = 1.1   # Close match
-            
+
             final_weight = weight * temporal_multiplier
             condition_scores[neighbour] += final_weight
-            symptom_contribution[neighbour][current] += weight
+            symptom_contribution[neighbour][current] += final_weight
 
             traversal_path.append({
                 "from": current,
-                "to":   neighbour,
+                "to": neighbour,
                 "weight": final_weight,
-                "temporal_match": temporal_multiplier > 1.0
+                "temporal_match": temporal_multiplier > 1.0,
             })
-
-            # Enqueue for further traversal
-            queue.append(neighbour)
 
     if not condition_scores:
         return []
@@ -387,6 +360,43 @@ def graph_summary(G: nx.DiGraph) -> dict:
         "condition_list": [G.nodes[c]["display"] for c in condition_nodes],
     }
 
+def explain_diagnosis(result: dict) -> str:
+    """
+    Generates a human-readable explanation for a diagnosis result.
+    Uses existing traversal_path and contribution data already 
+    computed by traverse_graph().
+
+    Args:
+        result (dict): A single result dict from traverse_graph()
+
+    Returns:
+        str: Human-readable explanation of why this condition was suggested
+    
+    Example:
+        >>> results = traverse_graph(G, ["headache", "nausea"])
+        >>> print(explain_diagnosis(results[0]))
+        Why 'Migraine' was suggested:
+          - 'headache' contributed 56%
+          - 'nausea' contributed 44%
+        Confidence: MEDIUM
+        Matched 2/4 known symptoms
+    """
+    lines = [f"Why '{result['display']}' was suggested:"]
+
+    contribution = result.get("contribution", {})
+    total = sum(contribution.values()) or 1
+
+    for symptom, weight in sorted(contribution.items(), key=lambda x: -x[1]):
+        percentage = round((weight / total) * 100)
+        lines.append(f"  - '{symptom}' contributed {percentage}%")
+
+    lines.append(f"\nConfidence: {result['confidence'].upper()}")
+    lines.append(f"Matched {result['match_ratio']} known symptoms")
+
+    if result.get("red_flags"):
+        lines.append(f"\n⚠️ Red flags: {', '.join(result['red_flags'])}")
+
+    return "\n".join(lines)
 
 # ---------------------------------------------------------------------------
 # 4. Quick self-test

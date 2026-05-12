@@ -19,6 +19,8 @@ import math
 import os
 import re
 from collections import defaultdict
+import hashlib
+import json
 
 
 # ---------------------------------------------------------------------------
@@ -36,9 +38,9 @@ def load_documents_from_csv(csv_path: str) -> list[dict]:
     documents: list[dict] = []
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        for row in reader:
+        for i, row in enumerate(reader):
             documents.append({
-                "id":        f"doc_{row['condition'].strip()}",
+                "id":        f"doc_{row['condition'].strip()}_{i}",
                 "condition": row["condition"].strip(),
                 "title": (row.get("title") or "").strip(),
                 "content": (row.get("content") or "").strip(),
@@ -53,11 +55,20 @@ def load_documents_from_csv(csv_path: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 class SemanticRetriever:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2", db_path: str = None):
         from sentence_transformers import SentenceTransformer
+        import chromadb
+        import pathlib
+        
         self.model = SentenceTransformer(model_name)
-        self.chunks = []
-        self.chunk_embeddings = None
+        
+        if db_path is None:
+            _here = pathlib.Path(__file__).parent.parent.parent
+            db_path = str(_here / "data" / "chroma_db")
+            
+        os.makedirs(db_path, exist_ok=True)
+        self.chroma_client = chromadb.PersistentClient(path=db_path)
+        self.collection = self.chroma_client.get_or_create_collection(name="medical_docs")
 
     def _chunk_text(self, text: str, chunk_size: int = 400, overlap: int = 50) -> list[str]:
         """
@@ -80,9 +91,29 @@ class SemanticRetriever:
     def index(self, documents: list[dict], chunk_size: int = 400, overlap: int = 50):
         """
         Processes documents by splitting them into chunks and embedding each chunk.
+        Uses ChromaDB for persistence and vector storage.
         """
-        self.chunks = []
+        csv_hash = hashlib.md5(
+            json.dumps([d["id"] for d in documents], sort_keys=True).encode()
+        ).hexdigest()
+
+        stored_hash = (self.collection.metadata or {}).get("csv_hash")
+
+        if self.collection.count() > 0 and stored_hash == csv_hash:
+            print(f"[RAG] ChromaDB up to date ({self.collection.count()} chunks). Skipping indexing.")
+            return
+        elif self.collection.count() > 0:
+            print("[RAG] CSV changed — rebuilding index...")
+            self.chroma_client.delete_collection("medical_docs")
+            self.collection = self.chroma_client.get_or_create_collection(
+                name="medical_docs",
+                metadata={"csv_hash": csv_hash}
+            )
+
+        ids = []
         texts_to_embed = []
+        metadatas = []
+        seen_ids = set()
 
         for doc in documents:
             content = doc.get("content", "")
@@ -92,59 +123,93 @@ class SemanticRetriever:
             doc_chunks = self._chunk_text(content, chunk_size, overlap)
             
             for i, chunk_text in enumerate(doc_chunks):
-                # Store chunk with a reference to the original document
-                chunk_data = {
-                    "id": f"{doc['id']}_chunk_{i}",
+                chunk_id = f"{doc['id']}_chunk_{i}"
+                
+                # Deduplicate within this batch
+                if chunk_id in seen_ids:
+                    continue
+                seen_ids.add(chunk_id)
+                
+                # We need to embed title + content for better semantic matching
+                embed_text = f"{title}: {chunk_text}"
+                
+                ids.append(chunk_id)
+                texts_to_embed.append(embed_text)
+                
+                metadatas.append({
                     "original_id": doc["id"],
                     "condition": doc["condition"],
                     "title": title,
                     "content": chunk_text
-                }
-                self.chunks.append(chunk_data)
-                # Embed the chunk content along with the title for context
-                texts_to_embed.append(f"{title}: {chunk_text}")
+                })
 
         if texts_to_embed:
-            self.chunk_embeddings = self.model.encode(texts_to_embed)
-            print(f"[RAG] Indexed {len(self.chunks)} chunks from {len(documents)} documents")
+            print(f"[RAG] Generating embeddings for {len(texts_to_embed)} chunks...")
+            embeddings = self.model.encode(texts_to_embed).tolist()
+            
+            print(f"[RAG] Inserting {len(texts_to_embed)} chunks into ChromaDB...")
+            self.collection.add(
+                ids=ids,
+                embeddings=embeddings,
+                metadatas=metadatas,
+                documents=texts_to_embed
+            )
+            print("[RAG] Indexing complete.")
         else:
-            self.chunk_embeddings = []
+            print("[RAG] No texts to index.")
 
     def retrieve(self, query: str, top_k: int = 3) -> list[dict]:
-        if not self.chunks or self.chunk_embeddings is None or len(self.chunk_embeddings) == 0:
+        if self.collection.count() == 0:
             return []
 
-        import numpy as np
-        from scipy.spatial.distance import cosine
+        # Encode the query
+        query_embedding = self.model.encode(query).tolist()
         
-        query_embedding = self.model.encode(query)
+        # Query ChromaDB (fetch more than top_k to account for deduplication)
+        fetch_k = top_k * 3
+        results = self.collection.query(
+            query_embeddings=[query_embedding],
+            n_results=fetch_k,
+            include=["metadatas", "distances"]
+        )
         
-        scores = []
-        for i, chunk_vec in enumerate(self.chunk_embeddings):
-            dist = cosine(query_embedding, chunk_vec)
-            score = 0.0 if np.isnan(dist) else 1.0 - dist
-            scores.append((float(score), i))
-
-        scores.sort(reverse=True)
-        results = []
-        # Track original IDs to avoid returning multiple chunks from the same document
-        # if they are highly similar (optional, but usually cleaner)
+        if not results["ids"] or not results["ids"][0]:
+            return []
+            
+        final_results = []
         seen_docs = set()
         
-        for score, idx in scores:
-            if len(results) >= top_k:
+        # ChromaDB returns a list of lists since we can query multiple vectors at once
+        ids = results["ids"][0]
+        metadatas = results["metadatas"][0]
+        distances = results["distances"][0]
+        
+        for i in range(len(ids)):
+            if len(final_results) >= top_k:
                 break
-            if score > 0:
-                chunk = self.chunks[idx].copy()
-                doc_id = chunk["original_id"]
                 
-                # Deduplication logic: only return the best chunk per document
-                if doc_id not in seen_docs:
-                    chunk["relevance_score"] = round(score, 4)
-                    results.append(chunk)
-                    seen_docs.add(doc_id)
-                    
-        return results
+            # Convert ChromaDB's distance to a similarity score (rough proxy)
+            # Assuming distance is a metric where lower is better.
+            dist = distances[i]
+            score = max(0.0, 1.0 - (dist / 2.0))
+            
+            meta = metadatas[i]
+            doc_id = meta["original_id"]
+            
+            # Deduplication
+            if doc_id not in seen_docs:
+                chunk_data = {
+                    "id": ids[i],
+                    "original_id": doc_id,
+                    "condition": meta["condition"],
+                    "title": meta["title"],
+                    "content": meta["content"],
+                    "relevance_score": round(score, 4)
+                }
+                final_results.append(chunk_data)
+                seen_docs.add(doc_id)
+                
+        return final_results
 
 
 # ---------------------------------------------------------------------------
@@ -163,11 +228,29 @@ class RAGPipeline:
         self.retriever = SemanticRetriever()
         self.retriever.index(documents)
 
-    def retrieve_context(self, query: str, top_k: int = 3) -> str:
-        """Return formatted context string for the LLM prompt."""
+    def retrieve_context(self, query: str, top_k: int = 3, min_score: float = 0.3) -> str:
+        """
+        Return formatted context string for the LLM prompt.
+        
+        Args:
+            query: User's symptom description
+            top_k: Maximum number of documents to retrieve
+            min_score: Minimum relevance score threshold (0.0 to 1.0).
+                      Documents below this score are excluded to prevent
+                      low-quality context reaching the LLM.
+        
+        Returns:
+            str: Formatted context string, or empty string if nothing relevant found.
+        """
         docs = self.retriever.retrieve(query, top_k=top_k)
         if not docs:
             return ""
+        
+        # Filter out low relevance chunks
+        docs = [doc for doc in docs if doc["relevance_score"] >= min_score]
+        if not docs:
+            return ""
+        
         parts = [f"[{doc['title']}]\n{doc['content']}" for doc in docs]
         return "\n\n---\n\n".join(parts)
 

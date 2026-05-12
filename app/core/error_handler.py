@@ -10,6 +10,7 @@ Supports:
 """
 
 import time
+import asyncio
 from typing import Callable, TypeVar, Any
 from functools import wraps
 import logging
@@ -146,42 +147,71 @@ def retry_with_backoff(
         def call_groq_api():
             ...
     """
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> T:
-            last_exception = None
-            
-            for attempt in range(max_retries + 1):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    last_exception = e
-                    
-                    # Don't retry on authentication errors
-                    if APIErrorHandler.is_authentication_error(e):
-                        APIErrorHandler.log_error(e, f"Attempt {attempt + 1}/{max_retries + 1}")
-                        raise
-                    
-                    # Only retry on rate limit and connection errors
-                    if not (APIErrorHandler.is_rate_limit_error(e) or 
-                           APIErrorHandler.is_connection_error(e)):
-                        APIErrorHandler.log_error(e, f"Attempt {attempt + 1}/{max_retries + 1}")
-                        raise
-                    
-                    if attempt < max_retries:
-                        # Calculate exponential backoff
-                        delay = min(base_delay * (exponential_base ** attempt), max_delay)
-                        logger.warning(
-                            f"Retrying after {delay}s (attempt {attempt + 1}/{max_retries})... "
-                            f"Error: {type(e).__name__}"
-                        )
-                        time.sleep(delay)
-                    else:
-                        APIErrorHandler.log_error(e, f"Final attempt {attempt + 1}/{max_retries + 1}")
-            
-            # If all retries exhausted, raise last exception
-            if last_exception:
-                raise last_exception
-        
-        return wrapper
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        if asyncio.iscoroutinefunction(func):
+            @wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                last_exception = None
+                
+                for attempt in range(max_retries + 1):
+                    try:
+                        return await func(*args, **kwargs)
+                    except Exception as e:
+                        last_exception = e
+                        
+                        if APIErrorHandler.is_authentication_error(e):
+                            APIErrorHandler.log_error(e, f"Attempt {attempt + 1}/{max_retries + 1}")
+                            raise
+                        
+                        if not (APIErrorHandler.is_rate_limit_error(e) or 
+                               APIErrorHandler.is_connection_error(e)):
+                            APIErrorHandler.log_error(e, f"Attempt {attempt + 1}/{max_retries + 1}")
+                            raise
+                        
+                        if attempt < max_retries:
+                            delay = min(base_delay * (exponential_base ** attempt), max_delay)
+                            logger.warning(
+                                f"Retrying after {delay}s (attempt {attempt + 1}/{max_retries})... "
+                                f"Error: {type(e).__name__}"
+                            )
+                            await asyncio.sleep(delay)
+                        else:
+                            APIErrorHandler.log_error(e, f"Final attempt {attempt + 1}/{max_retries + 1}")
+                
+                if last_exception:
+                    raise last_exception
+            return async_wrapper
+        else:
+            @wraps(func)
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+                last_exception = None
+                
+                for attempt in range(max_retries + 1):
+                    try:
+                        return func(*args, **kwargs)
+                    except Exception as e:
+                        last_exception = e
+                        
+                        if APIErrorHandler.is_authentication_error(e):
+                            APIErrorHandler.log_error(e, f"Attempt {attempt + 1}/{max_retries + 1}")
+                            raise
+                        
+                        if not (APIErrorHandler.is_rate_limit_error(e) or 
+                               APIErrorHandler.is_connection_error(e)):
+                            APIErrorHandler.log_error(e, f"Attempt {attempt + 1}/{max_retries + 1}")
+                            raise
+                        
+                        if attempt < max_retries:
+                            delay = min(base_delay * (exponential_base ** attempt), max_delay)
+                            logger.warning(
+                                f"Retrying after {delay}s (attempt {attempt + 1}/{max_retries})... "
+                                f"Error: {type(e).__name__}"
+                            )
+                            time.sleep(delay)
+                        else:
+                            APIErrorHandler.log_error(e, f"Final attempt {attempt + 1}/{max_retries + 1}")
+                
+                if last_exception:
+                    raise last_exception
+            return sync_wrapper
     return decorator

@@ -19,14 +19,37 @@ def graph():
     return load_graph_from_csv(str(_CSV))
 
 
+def max_single_symptom_weight(graph, symptoms):
+    """
+    Return the strongest single SUGGESTS edge among the matched symptom nodes.
+    This gives us a graph-derived baseline instead of a hardcoded threshold.
+    """
+    max_weight = 0.0
+
+    for symptom in symptoms:
+        s = symptom.lower().strip()
+        if s in graph and graph.nodes[s].get("node_type") == "symptom":
+            for _, _, edge_data in graph.out_edges(s, data=True):
+                if edge_data.get("edge_type") == "SUGGESTS":
+                    max_weight = max(max_weight, edge_data.get("weight", 0.0))
+
+    return round(max_weight, 4)
+
+
 def test_multiple_symptoms_all_matched(graph):
     """Regression: early-exit bug — all 3 symptoms must contribute to scoring."""
-    results = traverse_graph(graph, ["fever", "sore throat", "body aches"])
+    symptoms = ["fever", "sore throat", "body aches"]
+    results = traverse_graph(graph, symptoms)
+
     assert len(results) > 0
-    # Multiple symptom contributions push raw_score above any single edge weight
-    assert results[0]["raw_score"] > 1.0, (
-        f"raw_score={results[0]['raw_score']} — only one symptom seems to have contributed"
+
+    strongest_single_edge = max_single_symptom_weight(graph, symptoms)
+
+    # The top multi-symptom result should be stronger than any one single edge.
+    assert results[0]["raw_score"] > strongest_single_edge, (
+        f"raw_score={results[0]['raw_score']} strongest_single_edge={strongest_single_edge}"
     )
+    assert len(results[0]["contribution"]) > 1, "Expected multiple symptoms to contribute"
 
 
 def test_multi_symptom_returns_more_candidates_than_single(graph):
