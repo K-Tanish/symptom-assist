@@ -321,15 +321,15 @@ def build_pdf_bytes(text: str) -> bytes:
     pages_id = add_object("<< /Type /Pages /Kids [3 0 R] /Count {} >>".format(len(pages)))
     page_ids = []
     content_ids = []
+    font_id = add_object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
     for page in pages:
         content_id = add_object(f"<< /Length {len(page.encode('latin1'))} >>\nstream\n{page}\nendstream")
         content_ids.append(content_id)
     for content_id in content_ids:
         page_id = add_object(
-            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] /Contents {content_id} 0 R /Resources <</Font <</F1 5 0 R>>>> >>"
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] /Contents {content_id} 0 R /Resources <</Font <</F1 {font_id} 0 R>>>> >>"
         )
         page_ids.append(page_id)
-    font_id = add_object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
 
     # Rebuild pages object with correct kid refs
     pages_obj = f"<< /Type /Pages /Kids [{' '.join(f'{pid} 0 R' for pid in page_ids)}] /Count {len(page_ids)} >>"
