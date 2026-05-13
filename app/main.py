@@ -306,35 +306,63 @@ def _build_pdf_pages(lines: list[str], page_width: int = 595, page_height: int =
 
 
 def build_pdf_bytes(text: str) -> bytes:
+    """
+    Build a valid PDF with correct object ID references.
+    
+    Object assignment strategy (pre-calculated to avoid reference errors):
+    - ID 1: Catalog (references Pages at 2)
+    - ID 2: Pages (references page objects, will be filled in later)
+    - ID 3: Font (can be referenced as 3 0 R in all page objects)
+    - IDs 4+: Content streams and page objects
+    """
+    # PDF page dimensions
+    page_width = 595   # Letter width in points
+    page_height = 842  # Letter height in points
+    
     lines = []
     for raw_line in text.splitlines():
         wrapped = textwrap.wrap(raw_line, width=90) or [""]
         lines.extend(wrapped)
-    pages = _build_pdf_pages(lines)
+    pages = _build_pdf_pages(lines, page_width=page_width, page_height=page_height)
 
     objects = []
     def add_object(content: str) -> int:
+        """Add object and return its 1-based ID."""
         objects.append(content)
         return len(objects)
 
+    # Pre-calculate object IDs to ensure correct references
+    # Object 1: Catalog
     catalog_id = add_object("<< /Type /Catalog /Pages 2 0 R >>")
-    pages_id = add_object("<< /Type /Pages /Kids [3 0 R] /Count {} >>".format(len(pages)))
-    page_ids = []
-    content_ids = []
+    
+    # Object 2: Pages (kids list will be filled after page objects are created)
+    pages_placeholder_id = add_object("<< /Type /Pages /Kids [] /Count 0 >>")
+    
+    # Object 3: Font (now at a fixed, known ID before any page/content objects)
     font_id = add_object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+    
+    # Objects 4+: Content streams and page objects
+    # Add all content streams first
+    content_ids = []
     for page in pages:
-        content_id = add_object(f"<< /Length {len(page.encode('latin1'))} >>\nstream\n{page}\nendstream")
+        content_id = add_object(
+            f"<< /Length {len(page.encode('latin1'))} >>\nstream\n{page}\nendstream"
+        )
         content_ids.append(content_id)
+    
+    # Then add all page objects, referencing the font at fixed ID 3
+    page_ids = []
     for content_id in content_ids:
         page_id = add_object(
             f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] /Contents {content_id} 0 R /Resources <</Font <</F1 {font_id} 0 R>>>> >>"
         )
         page_ids.append(page_id)
 
-    # Rebuild pages object with correct kid refs
+    # Now update the Pages object (ID 2) with correct page references
     pages_obj = f"<< /Type /Pages /Kids [{' '.join(f'{pid} 0 R' for pid in page_ids)}] /Count {len(page_ids)} >>"
-    objects[1] = pages_obj
+    objects[pages_placeholder_id - 1] = pages_obj  # Update the placeholder (index is ID - 1)
 
+    # Build PDF file structure with correct byte offsets
     xref_offset = 0
     body = []
     offsets = []
