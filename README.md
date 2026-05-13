@@ -1,204 +1,115 @@
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:EA1DFE,100:609BF1&height=150&section=header"/>
+# SymptomAssist AI 🩺
 
-![NSOC 2026](https://img.shields.io/badge/NSOC-2026-blueviolet?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-active-success?style=for-the-badge)
+SymptomAssist AI is a neuro-symbolic medical assistant that combines:
 
-Part of **Nexus Spring of Code 2026 (NSOC '26)** — an open-source initiative empowering developers to build impactful, real-world projects.
+- Structured reasoning over a symptom-condition knowledge graph
+- Retrieval-augmented context from curated medical documents
+- Conversational response generation through an LLM
 
----
-# **🩺 SymptomAssist AI**
+It is designed for educational triage support, not clinical diagnosis.
 
-**A hybrid medical advisor that thinks in two layers — structured medical knowledge and conversational reasoning — so it can tell you what's wrong, not just what might be wrong.**
+## Latest Updates ✨
 
-Most symptom checkers are either too vague ("you might have a cold or cancer") or too rigid (decision trees that break the moment your symptoms don't fit neatly into one box). SymptomAssist combines a symbolic knowledge graph with a language model — the graph keeps the reasoning grounded, the LLM keeps it human.
+- Added accessible modal workflows for New Chat and Visit Summary dialogs ♿
+- Improved summary tooling with copy, print, and PDF export support 📄
+- Improved diagnostics UX with richer condition confidence and checklist views 📊
+- Strengthened graph visualization state handling and responsive rerender behavior 🕸️
+- Added better frontend structure via shared header/control styles 🧩
 
----
+## Core Features 🚀
 
-##   What It Looks Like
+- Knowledge graph traversal using symptom-to-condition edges 🧠
+- Red-flag symptom detection for urgent guidance 🚨
+- RAG grounding from domain-specific medical documents 📚
+- Conversation memory via session timeline support 🕒
+- Explainable diagnostics panel with confidence and contribution data 🔍
+- Visit-ready summary generation for clinician handoff 📝
 
-The interface has two panels working in parallel. On the left, a conversational chat. On the right, a live diagnostics view showing exactly what the system is doing — extracted symptoms, knowledge graph traversal, and ranked condition matches.
+## Architecture 🏗️
 
-### **Chat + Knowledge Graph View**
+The app uses a layered pipeline:
 
-![Knowledge Graph](./assets/Chat_and_Knowledge_graph.png)
+1. NLP extractor parses user symptom text.
+2. Knowledge graph scores candidate conditions.
+3. RAG pipeline retrieves matching medical context.
+4. LLM composes grounded, user-friendly guidance.
+5. Frontend renders diagnostics and graph state updates.
 
-The knowledge graph activates in real time as you describe your symptoms. Nodes light up as the BFS traversal finds connections across 41 conditions and 130+ symptoms.
+For a full architecture walkthrough, see [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md).
 
-### **Diagnostics Panel — Traversal Matches**
+## Repository Structure 📁
 
-![Diagnostics Panel](./assets/diagnostics-panel.png)
+- `app/`: FastAPI backend and reasoning pipeline
+- `data/`: CSV datasets and local vector store artifacts
+- `static/`: Frontend HTML, CSS, and JavaScript
+- `tests/`: Automated tests
+- `scratch/`: Local experiments and debug scripts
+- `.github/workflows/`: CI and automation
 
-The diagnostics tab shows extracted symptoms as tags, then surfaces ranked condition matches (with confidence levels) based purely on graph traversal — before the LLM even generates a response.
+## Quick Start ⚙️
 
----
-
-## 🧠 How It Works
-
-When you describe your symptoms, SymptomAssist doesn't just hand them to an LLM and hope for the best. It runs a structured two-stage pipeline:
-
-```
-
-Your input (natural language)
-
-        │
-
-        ▼
-
-[ NLP Extractor ]       →  Pulls structured symptom terms from free text
-
-        │
-
-        ▼
-
-[ Knowledge Graph ]     →  BFS traversal across 41 conditions, 130+ symptoms
-
-        │                  Ranks matches by symptom overlap
-
-        ▼
-
-[ RAG Pipeline ]        →  Retrieves relevant medical documentation
-
-        │                  Injects it into the LLM prompt as grounded context
-
-        ▼
-
-[ LLM (Groq) ]          →  Generates a cited, empathetic, conversational response
-
-        │
-
-        ▼
-
-Diagnosis + Red Flag Alerts (if critical symptoms detected)
-
-```
-
-This separation matters. The knowledge graph catches things the LLM might hallucinate. The LLM handles things the knowledge graph can't express — nuance, follow-up questions, conversational tone.
-
----
-
-##  🚀 Key Features
-
-### **Neuro-symbolic Reasoning**
-
-Medical facts live in the knowledge graph, not inside the LLM's weights. The model can't surface a condition unless the graph finds it first. This makes the system auditable, not just fluent.
-
-### **Priority Red Flag Detection**
-
-Critical symptoms are flagged before the full pipeline runs. You don't wait for a complete diagnosis to know something is urgent.
-
-### **Logic-Grounded RAG**
-
-Retrieved medical documents are injected directly into the LLM prompt. The model reasons over real sources, not just its training data.
-
-### **Real-time Diagnostics Dashboard**
-
-The right panel shows what's happening at each stage — extracted symptom tags, traversal matches with confidence scores, and the knowledge graph lighting up live as you type.
-
-### **Visit-Ready Clinical Summary**
-
-Generate a concise, sober text report of your session to share with a healthcare professional. It includes a chronological symptom timeline, potential matches from the knowledge graph (clearly framed as non-diagnostic), and any detected red flags. This closes the gap between an AI chat and a productive doctor's visit.
-
----
-
-## ⚙️ Why This Architecture
-
-Pure LLM symptom checkers have a well-documented problem: they're fluent, but not always accurate. They can generate convincing-sounding diagnoses that have no grounding in medical literature — and do it confidently.
-
-The knowledge graph acts as a hard constraint. If a disease isn't connected to your symptoms in the graph, the system won't surface it. The RAG layer adds a second constraint — the LLM must reason over retrieved medical documentation, not just its parametric memory.
-
-The result is a system that's harder to fool and easier to audit. You can see exactly why it reached a conclusion.
-
----
-
-## 📂 Project Structure
-
-```
-
-cl_symptom/
-├── app/
-│   ├── core/
-│   │   ├── knowledge_graph.py   # Symbolic reasoning (NetworkX + BFS traversal)
-│   │   ├── nlp_extractor.py     # Symptom extraction (lexicon-based NLP)
-│   │   └── rag_pipeline.py      # Medical RAG (semantic retrieval + context injection)
-│   └── main.py                  # FastAPI entry point (orchestration layer)
-│
-├── data/
-│   ├── symptom_disease.csv      # Structured symptom-condition mappings
-│   └── medical_docs.csv         # Medical documents for RAG grounding
-│
-├── static/
-│   └── index.html               # Frontend UI (Glassmorphism + D3.js graph)
-│
-├── assets/                      # Screenshots for documentation (README visuals)
-│   ├── knowledge-graph.png
-│   └── diagnostics-panel.png
-│
-├── .env.example                 # Environment variables template
-├── requirements.txt             # Project dependencies
-├── CONTRIBUTING.md              # Contribution guidelines
-└── README.md                    # Project documentation
-
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
+### 1. Prerequisites ✅
 
 - Python 3.10+
-- A [Groq API key](https://console.groq.com) (free tier works fine)
+- pip
+- Groq API key
 
-### Install
+### 2. Clone and Install 📦
 
 ```bash
-
-git clone https://github.com/your-username/SymptomAssist-AI.git
-cd SymptomAssist-AI
+git clone https://github.com/KGFCH2/symptom-assist.git
+cd symptom-assist
 pip install -r requirements.txt
-
 ```
 
-### Configure
-
-Copy the example env file and add your keys:
-
-```bash
+### 3. Configure Environment 🔐
 
 cp .env.example .env
 ```
 Once started, open your browser at [**http://127.0.0.1:8080**](http://127.0.0.1:8080).
 
 ```env
-
-GROQ_API_KEY=your_groq_api_key_here
-
-GEMINI_API_KEY=your_gemini_key_here   # optional
-
+GROQ_API_KEY=your_groq_api_key
 ```
 
-> Never commit your `.env` file. It's already in `.gitignore`.
-
-### Run
+### 4. Run the App ▶️
 
 ```bash
-
 uvicorn app.main:app --reload --port 8000
-
 ```
 
-Open [http://localhost:8000](http://localhost:8000) in your browser.
+Open `http://localhost:8000`.
 
----
+## API Endpoints 🌐
 
-## 🤝 Contributing
+- `POST /chat`: Main chat and reasoning orchestration endpoint
+- `GET /graph-data`: Graph data for D3 visualization
+- `POST /debug/analyse`: Internal diagnostics payload for debugging
+- `GET /summary/{session_id}`: Visit-ready summary payload
+- `POST /session/clear`: Reset session timeline state
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+## Development Notes 🛠️
 
-If you're fixing a bug or adding a feature, open an issue first so we can align on approach before you build it. For documentation improvements, feel free to raise a PR directly.
+- Keep `.env` and secrets out of version control
+- Follow contribution conventions in [CONTRIBUTING.md](CONTRIBUTING.md)
+- Respect security guidance in [Security.md](Security.md)
+- Use focused, single-purpose pull requests
 
----
+## Testing 🧪
 
-## ⚠️ Disclaimer
+Run test suite:
 
-SymptomAssist is a research and educational tool. It is not a substitute for professional medical advice, diagnosis, or treatment. If you are experiencing a medical emergency, call 108 or your local emergency number immediately.
+```bash
+pytest -q
+```
+
+Optional static checks in repository artifacts:
+
+- `pylint.txt`
+- `bandit.json`
+
+## Disclaimer ⚠️
+
+This project is for educational and research assistance only.
+It does not provide medical diagnosis or treatment.
+In emergencies, contact local emergency services immediately.

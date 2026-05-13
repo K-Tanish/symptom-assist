@@ -658,6 +658,95 @@
         addMessage("bot", "Let's start fresh. What symptoms are you experiencing?");
       }
 
+      function generateClinicalPdf(sessionData, downloadButton) {
+        const template = document.getElementById("clinical-report-template");
+        if (!template || !sessionData || !downloadButton) return;
+
+        template.querySelector("#pdf-gen-date").textContent = new Date().toUTCString();
+        template.querySelector("#pdf-session-id").textContent = sessionId ? `${sessionId.substring(0, 8)}...` : "new-session";
+
+        const redFlags = sessionData.red_flags || sessionData.red_flags_detected || [];
+        const rfSection = template.querySelector("#pdf-red-flags");
+        const rfList = template.querySelector("#pdf-rf-list");
+        if (redFlags.length > 0) {
+          rfSection.style.display = "block";
+          rfList.innerHTML = redFlags
+            .map((rf) => `<div class="report-item"><span class="report-item-bullet">•</span> ${String(rf).toUpperCase()}</div>`)
+            .join("");
+        } else {
+          rfSection.style.display = "none";
+        }
+
+        const symptoms = Array.isArray(sessionData.symptoms) ? [...sessionData.symptoms] : [];
+        const sympList = template.querySelector("#pdf-symptom-list");
+        sympList.innerHTML = symptoms
+          .sort((a, b) => (a.onset_order || 999) - (b.onset_order || 999))
+          .map((s) => {
+            const name = String(s.name || s).replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+            const dur = s.duration ? ` | Duration: ${s.duration}` : "";
+            const sev = s.severity ? ` | Severity: ${s.severity}` : "";
+            return `<div class="report-item"><span class="report-item-bullet">•</span> ${name}${dur}${sev}</div>`;
+          })
+          .join("");
+
+        const condList = template.querySelector("#pdf-condition-list");
+        const topConditions = Array.isArray(sessionData.top_conditions) ? sessionData.top_conditions : [];
+        condList.innerHTML = topConditions
+          .map((c, i) => `
+            <div class="report-condition">
+              <div class="report-condition-header">
+                <span class="report-condition-name">${i + 1}. ${c.display}</span>
+                <span class="report-condition-meta" style="color: ${c.severity === 'high' ? '#dc2626' : (c.severity === 'medium' ? '#92400e' : '#166534')}">
+                  ${c.severity} severity
+                </span>
+              </div>
+              <div class="report-condition-desc">${c.description || ''}</div>
+            </div>
+          `)
+          .join("");
+
+        const sourceList = template.querySelector("#pdf-source-list");
+        const ragSources = Array.isArray(sessionData.rag_sources) ? sessionData.rag_sources : [];
+        if (ragSources.length > 0) {
+          sourceList.innerHTML = ragSources
+            .map((src) => `<div class="report-item"><span class="report-item-bullet">•</span> ${src}</div>`)
+            .join("");
+        } else {
+          sourceList.innerHTML = '<p>No specific educational documents retrieved for this session.</p>';
+        }
+
+        const safeSessionId = (sessionId || "new-session").substring(0, 5);
+        const outputFilename = `SymptomAssist_Clinical_Summary_${safeSessionId}.pdf`;
+
+        const originalText = downloadButton.textContent;
+        downloadButton.textContent = "Generating...";
+        downloadButton.disabled = true;
+
+        const opt = {
+          margin: 10,
+          filename: outputFilename,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            letterRendering: true,
+            scrollY: 0,
+            logging: false,
+          },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+        };
+
+        html2pdf()
+          .set(opt)
+          .from(template)
+          .save()
+          .finally(() => {
+            downloadButton.textContent = originalText;
+            downloadButton.disabled = false;
+          });
+      }
+
       function updateDashboard(data) {
         // Symptoms
         const sympList = document.getElementById("symp-list");
@@ -666,48 +755,88 @@
             .map((s) => `<span class="tag tag-symptom">${s}</span>`)
             .join("");
         } else {
-          sympList.innerHTML =
-            '<div class="empty-state">None identified yet</div>';
+          sympList.innerHTML = '<div class="empty-state">None identified yet</div>';
         }
-
-        // Conditions
+ 
         const condList = document.getElementById("cond-list");
         if (data.top_conditions?.length > 0) {
           condList.innerHTML = data.top_conditions
-            .map((c) => {
+            .map((c, index) => {
               const pct = Math.round(c.score * 100);
+               
+              let confClass = "xai-conf-medium";
+              let confBarColor = "var(--primary-light)";
+              if (c.confidence === "High") { confClass = "xai-conf-high"; confBarColor = "#10b981"; }
+              if (c.confidence === "Low") { confClass = "xai-conf-low"; confBarColor = "#ef4444"; }
+              
+              const matchText = c.match_ratio ? `Match: ${c.match_ratio} symptoms` : "";
+ 
+              let contribHtml = "";
+              if (c.contribution && Object.keys(c.contribution).length > 0) {
+                contribHtml = `<div class="xai-contrib">
+                  <div class="xai-title">Symptom Contribution Weight</div>`;
+                for (const [symp, weight] of Object.entries(c.contribution)) {
+                  const wPct = Math.min(Math.round(weight * 100), 100);
+                  contribHtml += `
+                    <div class="xai-bar-row">
+                      <span class="xai-bar-label">${symp}</span>
+                      <div class="xai-bar-track"><div class="xai-bar-fill" style="width: ${wPct}%"></div></div>
+                      <span class="xai-bar-val">${weight.toFixed(2)}</span>
+                    </div>`;
+                }
+                contribHtml += `</div>`;
+              }
+
+              let checklistHtml = "";
+              if (index === 0 && (c.matched_symptoms || c.missing_symptoms)) {
+                checklistHtml = `
+                  <div class="xai-checklist">
+                    <div class="xai-title">Symptom Checklist</div>
+                    <ul class="xai-list">`;
+                (c.matched_symptoms || []).forEach(s => {
+                  checklistHtml += `<li class="xai-matched"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> ${s}</li>`;
+                });
+                (c.missing_symptoms || []).forEach(s => {
+                  checklistHtml += `<li class="xai-missing"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> ${s}</li>`;
+                });
+                checklistHtml += `</ul></div>`;
+              }
+
               return `
-          <div class="condition-item">
-            <div class="condition-header">
-              <span class="condition-name">${c.display}</span>
-              <span class="severity sev-${c.severity}">${c.severity}</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" style="width: ${pct}%"></div>
-            </div>
-          </div>
-        `;
+                <div class="condition-item">
+                  <div class="condition-header">
+                    <span class="condition-name">${c.display}</span>
+                    <span class="severity sev-${c.severity}">${c.severity}</span>
+                  </div>
+                  
+                  <div class="xai-match-quality ${confClass}">
+                    <span>Confidence: <strong>${c.confidence || 'Medium'}</strong></span>
+                    <span>${matchText}</span>
+                  </div>
+
+                  <div class="progress-track" style="margin-top: 6px;">
+                    <div class="progress-fill" style="width: ${pct}%; background: ${confBarColor}"></div>
+                  </div>
+                  
+                  ${index === 0 ? checklistHtml : ''}
+                  ${contribHtml}
+                </div>
+              `;
             })
             .join("");
         } else {
-          condList.innerHTML =
-            '<div class="empty-state">Awaiting context...</div>';
+          condList.innerHTML = '<div class="empty-state">Awaiting context...</div>';
         }
-
-        // RAG
+ 
         const ragList = document.getElementById("rag-list");
         if (data.rag_sources?.length > 0) {
           ragList.innerHTML = data.rag_sources
-            .map(
-              (s) =>
-                `<div class="source-item"><div class="source-bullet"></div>${s}</div>`,
-            )
+            .map((s) => `<div class="source-item"><div class="source-bullet"></div>${s}</div>`)
             .join("");
         } else {
           ragList.innerHTML = '<div class="empty-state">No docs matched</div>';
         }
-
-        // Follow-ups
+ 
         const fuList = document.getElementById("fu-list");
         if (data.graph_followups?.length > 0) {
           fuList.innerHTML = data.graph_followups
@@ -716,31 +845,29 @@
         } else {
           fuList.innerHTML = '<div class="empty-state">None currently</div>';
         }
-
-        // BFS Traversal Path
+ 
         const travList = document.getElementById("trav-list");
         const path = data.traversal_path || [];
         if (path.length > 0) {
           const shown = path.slice(0, 12);
-          travList.innerHTML =
-            `<div class="traversal-header">Visited ${path.length} edges · showing first ${shown.length}</div>` +
-            shown
-              .map(
-                (step, i) => `
-          <div class="traversal-step" style="animation-delay:${i * 40}ms">
-            <span class="ts-from">${step.from}</span>
-            <span class="ts-arrow">→</span>
-            <span class="ts-to">${step.to}</span>
-            <span class="ts-weight">w=${step.weight}</span>
-          </div>`,
-              )
-              .join("");
+          travList.innerHTML = 
+            `<div class="traversal-header">Graph Journey (First ${shown.length} Steps)</div>` +
+            `<div class="xai-flowchart">` +
+            shown.map((step, i) => `
+              <div class="xai-flow-step" style="animation-delay:${i * 40}ms">
+                <div class="xai-flow-node">${step.from}</div>
+                <div class="xai-flow-arrow">
+                  <span class="xai-flow-weight">${step.weight}</span>
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"></line><polyline points="19 15 12 22 5 15"></polyline></svg>
+                </div>
+                ${i === shown.length - 1 ? `<div class="xai-flow-node xai-flow-target">${step.to}</div>` : ''}
+              </div>
+            `).join("") +
+            `</div>`;
         } else {
-          travList.innerHTML =
-            '<div class="empty-state">No traversal yet</div>';
+          travList.innerHTML = '<div class="empty-state">No traversal yet</div>';
         }
-
-        // Red Flags
+ 
         const rfCard = document.getElementById("card-redflags");
         const rfList = document.getElementById("rf-list");
         if (data.red_flags_detected?.length > 0) {
@@ -819,45 +946,143 @@
           "Welcome to SymptomAssist AI. Describe your symptoms in detail — the medical knowledge graph (built from 41 conditions and 130+ symptoms from a real dataset) will be traversed using BFS to identify likely conditions.\n\nHow are you feeling today?",
         );
 
-        // ✅ MODAL FIX STARTS HERE
-        const modal = document.getElementById("confirmModal");
+        // ============================================================
+        // MODAL ACCESSIBILITY UTILITIES
+        // ============================================================
+        
+        /**
+         * Focus trap: Keep Tab focus within the dialog element
+         */
+        function createFocusTrap(dialogEl) {
+          const focusableSelectors = [
+            'button',
+            '[href]',
+            'input',
+            'select',
+            'textarea',
+            '[tabindex]:not([tabindex="-1"])'
+          ].join(',');
+          
+          return function handleKeyDown(e) {
+            if (e.key !== 'Tab') return;
+            
+            const focusables = Array.from(dialogEl.querySelectorAll(focusableSelectors));
+            if (focusables.length === 0) return;
+            
+            const firstEl = focusables[0];
+            const lastEl = focusables[focusables.length - 1];
+            const activeEl = document.activeElement;
+            
+            if (e.shiftKey) {
+              // Shift+Tab: Move backwards
+              if (activeEl === firstEl) {
+                e.preventDefault();
+                lastEl.focus();
+              }
+            } else {
+              // Tab: Move forwards
+              if (activeEl === lastEl) {
+                e.preventDefault();
+                firstEl.focus();
+              }
+            }
+          };
+        }
+
+        /**
+         * Open modal with accessibility features
+         */
+        function openModal(dialogEl, triggerEl) {
+          const focusTrapHandler = createFocusTrap(dialogEl);
+          
+          // Store reference to trigger element for focus restoration
+          dialogEl._triggerElement = triggerEl;
+          
+          // Show modal
+          dialogEl.showModal();
+          
+          // Set up Escape key handler
+          const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+              closeModal(dialogEl);
+            }
+          };
+          dialogEl._escapeHandler = escapeHandler;
+          dialogEl.addEventListener('keydown', escapeHandler);
+          
+          // Set up focus trap
+          dialogEl.addEventListener('keydown', focusTrapHandler);
+          dialogEl._focusTrapHandler = focusTrapHandler;
+          
+          // Focus first interactive element in modal
+          const firstButton = dialogEl.querySelector('button');
+          if (firstButton) {
+            setTimeout(() => firstButton.focus(), 50);
+          }
+        }
+
+        /**
+         * Close modal with focus restoration
+         */
+        function closeModal(dialogEl) {
+          // Clean up event listeners
+          if (dialogEl._escapeHandler) {
+            dialogEl.removeEventListener('keydown', dialogEl._escapeHandler);
+          }
+          if (dialogEl._focusTrapHandler) {
+            dialogEl.removeEventListener('keydown', dialogEl._focusTrapHandler);
+          }
+          
+          // Close dialog
+          dialogEl.close();
+          
+          // Restore focus to trigger element
+          if (dialogEl._triggerElement) {
+            setTimeout(() => dialogEl._triggerElement.focus(), 50);
+          }
+        }
+
+        // ============================================================
+        // CONFIRM MODAL - New Chat
+        // ============================================================
+        const confirmModal = document.getElementById("confirmModal");
         const confirmBtn = document.getElementById("confirmBtn");
         const cancelBtn = document.getElementById("cancelBtn");
         const newChatBtn = document.getElementById("newChatBtn");
 
         // OPEN modal
         newChatBtn.addEventListener("click", () => {
-          modal.classList.add("show");
+          openModal(confirmModal, newChatBtn);
         });
 
-        // CONFIRM
+        // CONFIRM - Clear chat and close
         confirmBtn.addEventListener("click", () => {
           clearChat();
-          modal.classList.remove("show");
+          closeModal(confirmModal);
         });
 
-        // CANCEL
+        // CANCEL - Close without action
         cancelBtn.addEventListener("click", () => {
-          modal.classList.remove("show");
+          closeModal(confirmModal);
         });
 
-        // CLICK OUTSIDE
-        modal.addEventListener("click", (e) => {
-          if (e.target === modal) {
-            modal.classList.remove("show");
+        confirmModal.addEventListener("click", (e) => {
+          if (e.target === confirmModal) {
+            closeModal(confirmModal);
           }
         });
-        // ✅ MODAL FIX ENDS HERE
-        
-        // --- Summary Modal Logic ---
+
+        // ============================================================
+        // SUMMARY MODAL
+        // ============================================================
         const summaryModal = document.getElementById("summaryModal");
         const viewSummaryBtn = document.getElementById("viewSummaryBtn");
         const closeSummaryBtn = document.getElementById("closeSummaryBtn");
         const copySummaryBtn = document.getElementById("copySummaryBtn");
+        const downloadPdfBtn = document.getElementById("downloadPdfBtn");
         const printSummaryBtn = document.getElementById("printSummaryBtn");
         const downloadPdfBtn = document.getElementById("downloadPdfBtn");
         const summaryTextArea = document.getElementById("summary-text-area");
-        
         let lastSummaryData = null;
 
         viewSummaryBtn.addEventListener("click", async () => {
@@ -866,15 +1091,16 @@
             return;
           }
           
-          summaryModal.classList.add("show");
+          openModal(summaryModal, viewSummaryBtn);
           summaryTextArea.textContent = "Assembling clinical summary...";
+          lastSummaryData = null;
           
           try {
             const res = await fetch(`/summary/${sessionId}`);
             if (!res.ok) throw new Error("Failed to fetch summary");
             const data = await res.json();
             summaryTextArea.textContent = data.text;
-            lastSummaryData = data.data; // Store for PDF export
+            lastSummaryData = data.data || null;
           } catch (err) {
             summaryTextArea.textContent = "Error loading summary. Please try again later.";
             lastSummaryData = null;
@@ -883,7 +1109,13 @@
         });
 
         closeSummaryBtn.addEventListener("click", () => {
-          summaryModal.classList.remove("show");
+          closeModal(summaryModal);
+        });
+
+        summaryModal.addEventListener("click", (e) => {
+          if (e.target === summaryModal) {
+            closeModal(summaryModal);
+          }
         });
 
         copySummaryBtn.addEventListener("click", () => {
@@ -906,107 +1138,12 @@
             alert("Summary data not available. Please wait for the summary to load.");
             return;
           }
-          generateClinicalPdf();
+          generateClinicalPdf(lastSummaryData, downloadPdfBtn);
         });
 
-        function generateClinicalPdf() {
-          const template = document.getElementById("clinical-report-template");
-          if (!template) return;
-          
-          // Populate Template - using querySelector to be safe with clones
-          template.querySelector("#pdf-gen-date").textContent = new Date().toUTCString();
-          template.querySelector("#pdf-session-id").textContent = sessionId.substring(0, 8) + "...";
-          
-          // Red Flags
-          const rfSection = template.querySelector("#pdf-red-flags");
-          const rfList = template.querySelector("#pdf-rf-list");
-          if (lastSummaryData.red_flags && lastSummaryData.red_flags.length > 0) {
-            rfSection.style.display = "block";
-            rfList.innerHTML = lastSummaryData.red_flags
-              .map(rf => `<div class="report-item"><span class="report-item-bullet">•</span> ${rf.toUpperCase()}</div>`)
-              .join("");
-          } else {
-            rfSection.style.display = "none";
-          }
-          
-          // Symptoms
-          const sympList = template.querySelector("#pdf-symptom-list");
-          const sortedSymps = [...lastSummaryData.symptoms].sort((a, b) => 
-            (a.onset_order || 999) - (b.onset_order || 999)
-          );
-          sympList.innerHTML = sortedSymps.map(s => {
-            const name = s.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            const dur = s.duration ? ` | Duration: ${s.duration}` : '';
-            const sev = s.severity ? ` | Severity: ${s.severity}` : '';
-            return `<div class="report-item"><span class="report-item-bullet">•</span> ${name}${dur}${sev}</div>`;
-          }).join("");
-          
-          // Conditions
-          const condList = template.querySelector("#pdf-condition-list");
-          condList.innerHTML = lastSummaryData.top_conditions.map((c, i) => `
-            <div class="report-condition">
-              <div class="report-condition-header">
-                <span class="report-condition-name">${i+1}. ${c.display}</span>
-                <span class="report-condition-meta" style="color: ${c.severity === 'high' ? '#dc2626' : (c.severity === 'medium' ? '#92400e' : '#166534')}">
-                  ${c.severity} severity
-                </span>
-              </div>
-              <div class="report-condition-desc">${c.description}</div>
-            </div>
-          `).join("");
-          
-          // Sources
-          const sourceList = template.querySelector("#pdf-source-list");
-          if (lastSummaryData.rag_sources && lastSummaryData.rag_sources.length > 0) {
-            sourceList.innerHTML = lastSummaryData.rag_sources
-              .map(src => `<div class="report-item"><span class="report-item-bullet">•</span> ${src}</div>`)
-              .join("");
-          } else {
-            sourceList.innerHTML = '<p>No specific educational documents retrieved for this session.</p>';
-          }
-          
-          const safeSessionId = (sessionId || 'new-session').substring(0, 5);
-          const outputFilename = 'SymptomAssist_Clinical_Summary_' + safeSessionId + '.pdf';
-
-          const originalText = downloadPdfBtn.textContent;
-          downloadPdfBtn.textContent = "Generating...";
-          downloadPdfBtn.disabled = true;
-
-          // html2pdf options
-          const opt = {
-            margin: 10,
-            filename: outputFilename,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { 
-              scale: 2, 
-              useCORS: true, 
-              letterRendering: true,
-              scrollY: 0,
-              logging: false
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-          };
-
-          // Use the template directly - html2pdf handles the cloning and off-screen rendering
-          html2pdf().set(opt).from(template).save().then(() => {
-            downloadPdfBtn.textContent = originalText;
-            downloadPdfBtn.disabled = false;
-          }).catch(err => {
-            console.error("PDF Generation Error:", err);
-            alert("Failed to generate PDF. Please try again.");
-            downloadPdfBtn.textContent = originalText;
-            downloadPdfBtn.disabled = false;
-          });
-        }
-
-        summaryModal.addEventListener("click", (e) => {
-          if (e.target === summaryModal) {
-            summaryModal.classList.remove("show");
-          }
-        });
-
-        // Theme toggle
+        // ============================================================
+        // THEME TOGGLE
+        // ============================================================
         const toggleBtn = document.getElementById("theme-toggle");
 
         if (localStorage.getItem("theme") === "dark") {
