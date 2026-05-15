@@ -35,20 +35,73 @@ import textwrap
 from .core.error_handler import APIErrorHandler, retry_with_backoff
 from .logging_config import setup_logging
 
-from .core.knowledge_graph import (
+import sys
+import pathlib
+
+_PROJECT_ROOT = pathlib.Path(__file__).parent.parent
+sys.path.insert(0, str(_PROJECT_ROOT))
+
+from app.core.knowledge_graph import (
     load_graph_from_csv, traverse_graph, find_candidate_conditions,
     get_followup_questions, get_treatment, check_red_flags, graph_summary
 )
-from .core.rag_pipeline import RAGPipeline
-from .core.nlp_extractor import SymptomExtractor
+from app.core.rag_pipeline import RAGPipeline
+from app.core.nlp_extractor import SymptomExtractor
 
+# ---------------------------------------------------------------------------
+# Resolve project paths and load environment
+# ---------------------------------------------------------------------------
+load_dotenv(_PROJECT_ROOT / ".env", override=True)
+load_dotenv()
 load_dotenv(override=True)
 setup_logging(log_dir="logs", level=logging.INFO)
 
+
+def get_groq_api_key() -> str:
+    raw = os.getenv("GROQ_API_KEY", "")
+    cleaned = raw.strip().strip('"').strip("'")
+
+    print("👉 API KEY FROM ENV:", cleaned)   # ✅ ADD THIS LINE
+
+    return cleaned
+
+
+def ask_groq(prompt: str) -> str:
+    api_key = get_groq_api_key()
+
+    if not api_key:
+        return "AI is running in limited mode: GROQ_API_KEY is missing."
+
+    try:
+        print("API KEY LOADED:", api_key[:10])
+
+        client = Groq(api_key=api_key)
+
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "You are a helpful medical assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.5,
+        )
+
+        return response.choices[0].message.content
+
+    except Exception as e:
+        err = str(e).lower()
+        print("GROQ ERROR:", err)
+
+        if "api" in err and "key" in err:
+            return "❌ Invalid API Key. Please generate a NEW key and restart server."
+
+        if "model" in err:
+            return "❌ Model issue. Try changing model."
+
+        return "❌ AI error: " + str(e)
 # ---------------------------------------------------------------------------
 # Resolve dataset paths (relative to the project root)
 # ---------------------------------------------------------------------------
-_PROJECT_ROOT = pathlib.Path(__file__).parent.parent
 _SYMPTOM_CSV  = str(_PROJECT_ROOT / "data" / "symptom_disease.csv")
 _DOCS_CSV     = str(_PROJECT_ROOT / "data" / "medical_docs.csv")
 
@@ -62,6 +115,11 @@ logging.info("[startup] Initialising RAG pipeline from CSV...")
 RAG = RAGPipeline(csv_path=_DOCS_CSV)
 logging.info("[startup] Loading NLP extractor (dynamic lexicon from CSV)...")
 NLP = SymptomExtractor(csv_path=_SYMPTOM_CSV)
+if get_groq_api_key():
+    print("[startup] Groq client ready.")
+else:
+    print("[startup] GROQ_API_KEY missing. Running in fallback mode without LLM.")
+print("[startup] Groq client ready.")
 logging.info("[startup] Groq client ready.")
 GROQ = None  # Lazy initialization: will be created on first use
 
@@ -130,7 +188,14 @@ class SymptomDetail(BaseModel):
     duration: Optional[str] = Field(None, max_length=100)
     severity: Optional[str] = Field(None, max_length=50)
 
+class TaggedSymptom(BaseModel):
+    symptom: str
+    status: str
+
 class ChatRequest(BaseModel):
+    messages: List[Message]
+    extracted_symptoms: Optional[List[str]] = []  # accumulate across turns
+    extracted_symptoms_detailed: Optional[List[TaggedSymptom]] = []
     messages: List[Message] = Field(..., max_length=20)
     session_id: Optional[str] = Field(None, max_length=100)
     extracted_symptoms: Optional[List[str]] = Field([], max_length=30)
@@ -140,6 +205,7 @@ class ChatResponse(BaseModel):
     reply: str
     session_id: str                         # client must echo this on the next turn
     extracted_symptoms: List[str]
+    extracted_symptoms_detailed: List[TaggedSymptom] = []
     symptom_timeline: List[str] = []
     temporal_context: List[SymptomDetail] = [] # New: returned to frontend
     top_conditions: List[dict]
@@ -176,13 +242,19 @@ class SummaryResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 def build_system_prompt(
+    extracted_symptoms: list,
+    extracted_symptoms_detailed: list,
+    candidate_conditions: list,
+    rag_context: str,
+    followup_questions: list,
+    red_flags: list,
     extracted_symptoms,
     candidate_conditions,
     rag_context,
     followup_questions,
     red_flags,
     has_noise=False,
-) -> str:
+)-> str:
 
     base = """You are SymptomAssist, a compassionate AI health assistant.
 You have access to a medical knowledge graph and retrieved medical documents to inform your responses.
@@ -230,8 +302,13 @@ Your only function is medical triage and symptom assessment.
     if red_flags:
         base += f"\n=== RED FLAG ALERT START ===\n⚠️ RED FLAG SYMPTOMS DETECTED: {', '.join(red_flags)}\nIf these are present, immediately advise emergency care regardless of other context.\n=== RED FLAG ALERT END ===\n"
 
-    if extracted_symptoms:
-        base += f"\n=== EXTRACTED SYMPTOMS START ===\nSYMPTOMS IDENTIFIED FROM PATIENT'S TEXT:\n{', '.join(extracted_symptoms)}\n=== EXTRACTED SYMPTOMS END ===\n"
+    if extracted_symptoms_detailed:
+        base += "\nSYMPTOMS IDENTIFIED FROM PATIENT'S TEXT WITH STATUS:\n"
+        for t in extracted_symptoms_detailed:
+            if isinstance(t, dict):
+                base += f"- {t['symptom']} (Status: {t['status']})\n"
+            else:
+                base += f"- {t.symptom} (Status: {t.status})\n"
 
     if candidate_conditions:
         base += "\n=== GRAPH TRAVERSAL START ===\nKNOWLEDGE GRAPH — BFS TRAVERSAL TOP CANDIDATE CONDITIONS:\n"
@@ -534,6 +611,12 @@ async def chat(request: ChatRequest):
         SESSION_STORE[session_id]["symptoms"] = all_symptoms_data
         all_symptom_names = [s["name"] for s in all_symptoms_data]
 
+        existing_detailed = [t.dict() if not isinstance(t, dict) else t for t in (request.extracted_symptoms_detailed or [])]
+        tagged_dict = {t["symptom"]: t["status"] for t in existing_detailed}
+        for t in extraction.tagged:
+            tagged_dict[t["symptom"]] = t["status"]
+        all_symptoms_detailed = [{"symptom": k, "status": v} for k, v in tagged_dict.items()]
+
         # --- Step 2: Red flag check ---
         safe_symptoms = [
             s for s in all_symptom_names
@@ -574,6 +657,8 @@ async def chat(request: ChatRequest):
 
         # --- Step 5: Build enriched system prompt ---
         system_prompt = build_system_prompt(
+            extracted_symptoms=all_symptoms,
+            extracted_symptoms_detailed=all_symptoms_detailed,
             extracted_symptoms=all_symptom_names,
             candidate_conditions=candidates,
             rag_context=rag_context,
@@ -582,6 +667,48 @@ async def chat(request: ChatRequest):
             has_noise=bool(extraction.noise),
         )
 
+        # --- Step 6: Call Groq ---
+        if not get_groq_api_key():
+            symptom_text = ", ".join(all_symptoms[:5]) if all_symptoms else "no clear symptom keywords"
+            if candidates:
+                top = candidates[0]["display"]
+                reply = (
+                    f"I noted these symptoms from your message: {symptom_text}. "
+                    f"Based on this limited analysis, one possible match is {top}. "
+                    "This is not a final diagnosis. "
+                    "I'm running in limited mode because GROQ_API_KEY is not configured, "
+                    "so replies may feel brief."
+                )
+            else:
+                reply = (
+                    f"I noted these symptoms from your message: {symptom_text}. "
+                    "I could not map them confidently to a likely condition yet. "
+                    "I'm running in limited mode because GROQ_API_KEY is not configured, "
+                    "so replies may feel brief."
+                )
+        else:
+            full_prompt = (
+                f"{system_prompt}\n\n"
+                f"Conversation so far:\n"
+                + "\n".join([f"{m.role}: {m.content}" for m in request.messages])
+            )
+            reply = ask_groq(full_prompt)
+
+        return ChatResponse(
+            reply=reply,
+            extracted_symptoms=all_symptoms,
+            extracted_symptoms_detailed=[TaggedSymptom(**t) for t in all_symptoms_detailed],
+            symptom_timeline=all_symptoms,
+            top_conditions=[
+                {
+                    "display":       c["display"],
+                    "score":         c["score"],
+                    "severity":      c["severity"],
+                    "condition_id":  c["condition_id"],
+                    "traversal_path": c.get("traversal_path", []),
+                }
+                for c in candidates[:3]
+        ],
         # --- Step 6: Call Groq with full context ---
         # Map roles to Groq roles ("user" -> "user", "model" -> "assistant")
         messages = [{"role": "system", "content": system_prompt}]
@@ -611,7 +738,7 @@ async def chat(request: ChatRequest):
             red_flags_detected=red_flags,
             traversal_path=candidates[0].get("traversal_path", []) if candidates else [],
             journey_edges=journey_edges,
-        )
+        ))
     except Exception as overall_e:
         import traceback
         err_msg = traceback.format_exc()
@@ -620,6 +747,22 @@ async def chat(request: ChatRequest):
         APIErrorHandler.log_error(overall_e, "Critical error in /chat endpoint")
         with open("error_log.txt", "w", encoding="utf-8") as f:
             f.write(err_msg)
+        # Fail soft so frontend can keep working and display a helpful reply.
+        return ChatResponse(
+            reply=(
+                "I'm sorry, I hit an internal processing issue while analyzing your message. "
+                "Please try rephrasing once."
+            ),
+            extracted_symptoms=request.extracted_symptoms or [],
+            extracted_symptoms_detailed=request.extracted_symptoms_detailed or [],
+            symptom_timeline=request.extracted_symptoms or [],
+            top_conditions=[],
+            rag_sources=[],
+            graph_followups=[],
+            red_flags_detected=[],
+            traversal_path=[],
+            journey_edges=[],
+        )
         raise HTTPException(status_code=500, detail=APIErrorHandler.get_user_message(overall_e)) from overall_e
 
 
@@ -819,6 +962,7 @@ def index():
 
 if __name__ == "__main__":
     import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8080)
     uvicorn.run(
         "app.main:app",
         host=os.getenv("HOST", "127.0.0.1"),

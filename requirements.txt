@@ -10,6 +10,9 @@ chromadb
 # ── LLM Client ────────────────────────────────────────────────────────────────
 groq>=0.9.0
 
+# For production-grade NLP (upgrade from keyword matching):
+spacy
+# then run: python -m spacy download en_core_web_sm
 # ── Knowledge Graph ───────────────────────────────────────────────────────────
 networkx>=3.3
 

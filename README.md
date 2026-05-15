@@ -64,7 +64,9 @@ pip install -r requirements.txt
 
 ### 3. Configure Environment 🔐
 
-Create `.env` in project root:
+cp .env.example .env
+```
+Once started, open your browser at [**http://127.0.0.1:8080**](http://127.0.0.1:8080).
 
 ```env
 GROQ_API_KEY=your_groq_api_key
