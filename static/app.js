@@ -658,7 +658,97 @@
         addMessage("bot", "Let's start fresh. What symptoms are you experiencing?");
       }
 
-     function updateDashboard(data) { 
+      function generateClinicalPdf(sessionData, downloadButton) {
+        const template = document.getElementById("clinical-report-template");
+        if (!template || !sessionData || !downloadButton) return;
+
+        template.querySelector("#pdf-gen-date").textContent = new Date().toUTCString();
+        template.querySelector("#pdf-session-id").textContent = sessionId ? `${sessionId.substring(0, 8)}...` : "new-session";
+
+        const redFlags = sessionData.red_flags || sessionData.red_flags_detected || [];
+        const rfSection = template.querySelector("#pdf-red-flags");
+        const rfList = template.querySelector("#pdf-rf-list");
+        if (redFlags.length > 0) {
+          rfSection.style.display = "block";
+          rfList.innerHTML = redFlags
+            .map((rf) => `<div class="report-item"><span class="report-item-bullet">•</span> ${String(rf).toUpperCase()}</div>`)
+            .join("");
+        } else {
+          rfSection.style.display = "none";
+        }
+
+        const symptoms = Array.isArray(sessionData.symptoms) ? [...sessionData.symptoms] : [];
+        const sympList = template.querySelector("#pdf-symptom-list");
+        sympList.innerHTML = symptoms
+          .sort((a, b) => (a.onset_order || 999) - (b.onset_order || 999))
+          .map((s) => {
+            const name = String(s.name || s).replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+            const dur = s.duration ? ` | Duration: ${s.duration}` : "";
+            const sev = s.severity ? ` | Severity: ${s.severity}` : "";
+            return `<div class="report-item"><span class="report-item-bullet">•</span> ${name}${dur}${sev}</div>`;
+          })
+          .join("");
+
+        const condList = template.querySelector("#pdf-condition-list");
+        const topConditions = Array.isArray(sessionData.top_conditions) ? sessionData.top_conditions : [];
+        condList.innerHTML = topConditions
+          .map((c, i) => `
+            <div class="report-condition">
+              <div class="report-condition-header">
+                <span class="report-condition-name">${i + 1}. ${c.display}</span>
+                <span class="report-condition-meta" style="color: ${c.severity === 'high' ? '#dc2626' : (c.severity === 'medium' ? '#92400e' : '#166534')}">
+                  ${c.severity} severity
+                </span>
+              </div>
+              <div class="report-condition-desc">${c.description || ''}</div>
+            </div>
+          `)
+          .join("");
+
+        const sourceList = template.querySelector("#pdf-source-list");
+        const ragSources = Array.isArray(sessionData.rag_sources) ? sessionData.rag_sources : [];
+        if (ragSources.length > 0) {
+          sourceList.innerHTML = ragSources
+            .map((src) => `<div class="report-item"><span class="report-item-bullet">•</span> ${src}</div>`)
+            .join("");
+        } else {
+          sourceList.innerHTML = '<p>No specific educational documents retrieved for this session.</p>';
+        }
+
+        const safeSessionId = (sessionId || "new-session").substring(0, 5);
+        const outputFilename = `SymptomAssist_Clinical_Summary_${safeSessionId}.pdf`;
+
+        const originalText = downloadButton.textContent;
+        downloadButton.textContent = "Generating...";
+        downloadButton.disabled = true;
+
+        const opt = {
+          margin: 10,
+          filename: outputFilename,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            letterRendering: true,
+            scrollY: 0,
+            logging: false,
+          },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+        };
+
+        html2pdf()
+          .set(opt)
+          .from(template)
+          .save()
+          .finally(() => {
+            downloadButton.textContent = originalText;
+            downloadButton.disabled = false;
+          });
+      }
+
+      function updateDashboard(data) {
+        // Symptoms
         const sympList = document.getElementById("symp-list");
         if (data.extracted_symptoms?.length > 0) {
           sympList.innerHTML = data.extracted_symptoms
@@ -798,7 +888,6 @@
         isLoading = true;
 
         sendBtn.disabled = true;
-        sendBtn.textContent = "Sending...";
 
         addMessage("user", text);
         history.push({ role: "user", content: text });
@@ -838,7 +927,6 @@
 
         isLoading = false;
 
-        sendBtn.textContent = "Send";
         sendBtn.disabled = inputEl.value.trim() === "";
 
         inputEl.focus();
@@ -856,45 +944,142 @@
           "Welcome to SymptomAssist AI. Describe your symptoms in detail — the medical knowledge graph (built from 41 conditions and 130+ symptoms from a real dataset) will be traversed using BFS to identify likely conditions.\n\nHow are you feeling today?",
         );
 
-        // ✅ MODAL FIX STARTS HERE
-        const modal = document.getElementById("confirmModal");
+        // ============================================================
+        // MODAL ACCESSIBILITY UTILITIES
+        // ============================================================
+        
+        /**
+         * Focus trap: Keep Tab focus within the dialog element
+         */
+        function createFocusTrap(dialogEl) {
+          const focusableSelectors = [
+            'button',
+            '[href]',
+            'input',
+            'select',
+            'textarea',
+            '[tabindex]:not([tabindex="-1"])'
+          ].join(',');
+          
+          return function handleKeyDown(e) {
+            if (e.key !== 'Tab') return;
+            
+            const focusables = Array.from(dialogEl.querySelectorAll(focusableSelectors));
+            if (focusables.length === 0) return;
+            
+            const firstEl = focusables[0];
+            const lastEl = focusables[focusables.length - 1];
+            const activeEl = document.activeElement;
+            
+            if (e.shiftKey) {
+              // Shift+Tab: Move backwards
+              if (activeEl === firstEl) {
+                e.preventDefault();
+                lastEl.focus();
+              }
+            } else {
+              // Tab: Move forwards
+              if (activeEl === lastEl) {
+                e.preventDefault();
+                firstEl.focus();
+              }
+            }
+          };
+        }
+
+        /**
+         * Open modal with accessibility features
+         */
+        function openModal(dialogEl, triggerEl) {
+          const focusTrapHandler = createFocusTrap(dialogEl);
+          
+          // Store reference to trigger element for focus restoration
+          dialogEl._triggerElement = triggerEl;
+          
+          // Show modal
+          dialogEl.showModal();
+          
+          // Set up Escape key handler
+          const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+              closeModal(dialogEl);
+            }
+          };
+          dialogEl._escapeHandler = escapeHandler;
+          dialogEl.addEventListener('keydown', escapeHandler);
+          
+          // Set up focus trap
+          dialogEl.addEventListener('keydown', focusTrapHandler);
+          dialogEl._focusTrapHandler = focusTrapHandler;
+          
+          // Focus first interactive element in modal
+          const firstButton = dialogEl.querySelector('button');
+          if (firstButton) {
+            setTimeout(() => firstButton.focus(), 50);
+          }
+        }
+
+        /**
+         * Close modal with focus restoration
+         */
+        function closeModal(dialogEl) {
+          // Clean up event listeners
+          if (dialogEl._escapeHandler) {
+            dialogEl.removeEventListener('keydown', dialogEl._escapeHandler);
+          }
+          if (dialogEl._focusTrapHandler) {
+            dialogEl.removeEventListener('keydown', dialogEl._focusTrapHandler);
+          }
+          
+          // Close dialog
+          dialogEl.close();
+          
+          // Restore focus to trigger element
+          if (dialogEl._triggerElement) {
+            setTimeout(() => dialogEl._triggerElement.focus(), 50);
+          }
+        }
+
+        // ============================================================
+        // CONFIRM MODAL - New Chat
+        // ============================================================
+        const confirmModal = document.getElementById("confirmModal");
         const confirmBtn = document.getElementById("confirmBtn");
         const cancelBtn = document.getElementById("cancelBtn");
         const newChatBtn = document.getElementById("newChatBtn");
 
         // OPEN modal
         newChatBtn.addEventListener("click", () => {
-          modal.classList.add("show");
+          openModal(confirmModal, newChatBtn);
         });
 
-        // CONFIRM
+        // CONFIRM - Clear chat and close
         confirmBtn.addEventListener("click", () => {
           clearChat();
-          modal.classList.remove("show");
+          closeModal(confirmModal);
         });
 
-        // CANCEL
+        // CANCEL - Close without action
         cancelBtn.addEventListener("click", () => {
-          modal.classList.remove("show");
+          closeModal(confirmModal);
         });
 
-        // CLICK OUTSIDE
-        modal.addEventListener("click", (e) => {
-          if (e.target === modal) {
-            modal.classList.remove("show");
+        confirmModal.addEventListener("click", (e) => {
+          if (e.target === confirmModal) {
+            closeModal(confirmModal);
           }
         });
-        // ✅ MODAL FIX ENDS HERE
-        
-        // --- Summary Modal Logic ---
+
+        // ============================================================
+        // SUMMARY MODAL
+        // ============================================================
         const summaryModal = document.getElementById("summaryModal");
         const viewSummaryBtn = document.getElementById("viewSummaryBtn");
         const closeSummaryBtn = document.getElementById("closeSummaryBtn");
         const copySummaryBtn = document.getElementById("copySummaryBtn");
-        const printSummaryBtn = document.getElementById("printSummaryBtn");
         const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+        const printSummaryBtn = document.getElementById("printSummaryBtn");
         const summaryTextArea = document.getElementById("summary-text-area");
-        
         let lastSummaryData = null;
 
         viewSummaryBtn.addEventListener("click", async () => {
@@ -903,15 +1088,16 @@
             return;
           }
           
-          summaryModal.classList.add("show");
+          openModal(summaryModal, viewSummaryBtn);
           summaryTextArea.textContent = "Assembling clinical summary...";
+          lastSummaryData = null;
           
           try {
             const res = await fetch(`/summary/${sessionId}`);
             if (!res.ok) throw new Error("Failed to fetch summary");
             const data = await res.json();
             summaryTextArea.textContent = data.text;
-            lastSummaryData = data.data; // Store for PDF export
+            lastSummaryData = data.data || null;
           } catch (err) {
             summaryTextArea.textContent = "Error loading summary. Please try again later.";
             lastSummaryData = null;
@@ -920,7 +1106,13 @@
         });
 
         closeSummaryBtn.addEventListener("click", () => {
-          summaryModal.classList.remove("show");
+          closeModal(summaryModal);
+        });
+
+        summaryModal.addEventListener("click", (e) => {
+          if (e.target === summaryModal) {
+            closeModal(summaryModal);
+          }
         });
 
         copySummaryBtn.addEventListener("click", () => {
@@ -943,107 +1135,12 @@
             alert("Summary data not available. Please wait for the summary to load.");
             return;
           }
-          generateClinicalPdf();
+          generateClinicalPdf(lastSummaryData, downloadPdfBtn);
         });
 
-        function generateClinicalPdf() {
-          const template = document.getElementById("clinical-report-template");
-          if (!template) return;
-          
-          // Populate Template - using querySelector to be safe with clones
-          template.querySelector("#pdf-gen-date").textContent = new Date().toUTCString();
-          template.querySelector("#pdf-session-id").textContent = sessionId.substring(0, 8) + "...";
-          
-          // Red Flags
-          const rfSection = template.querySelector("#pdf-red-flags");
-          const rfList = template.querySelector("#pdf-rf-list");
-          if (lastSummaryData.red_flags && lastSummaryData.red_flags.length > 0) {
-            rfSection.style.display = "block";
-            rfList.innerHTML = lastSummaryData.red_flags
-              .map(rf => `<div class="report-item"><span class="report-item-bullet">•</span> ${rf.toUpperCase()}</div>`)
-              .join("");
-          } else {
-            rfSection.style.display = "none";
-          }
-          
-          // Symptoms
-          const sympList = template.querySelector("#pdf-symptom-list");
-          const sortedSymps = [...lastSummaryData.symptoms].sort((a, b) => 
-            (a.onset_order || 999) - (b.onset_order || 999)
-          );
-          sympList.innerHTML = sortedSymps.map(s => {
-            const name = s.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            const dur = s.duration ? ` | Duration: ${s.duration}` : '';
-            const sev = s.severity ? ` | Severity: ${s.severity}` : '';
-            return `<div class="report-item"><span class="report-item-bullet">•</span> ${name}${dur}${sev}</div>`;
-          }).join("");
-          
-          // Conditions
-          const condList = template.querySelector("#pdf-condition-list");
-          condList.innerHTML = lastSummaryData.top_conditions.map((c, i) => `
-            <div class="report-condition">
-              <div class="report-condition-header">
-                <span class="report-condition-name">${i+1}. ${c.display}</span>
-                <span class="report-condition-meta" style="color: ${c.severity === 'high' ? '#dc2626' : (c.severity === 'medium' ? '#92400e' : '#166534')}">
-                  ${c.severity} severity
-                </span>
-              </div>
-              <div class="report-condition-desc">${c.description}</div>
-            </div>
-          `).join("");
-          
-          // Sources
-          const sourceList = template.querySelector("#pdf-source-list");
-          if (lastSummaryData.rag_sources && lastSummaryData.rag_sources.length > 0) {
-            sourceList.innerHTML = lastSummaryData.rag_sources
-              .map(src => `<div class="report-item"><span class="report-item-bullet">•</span> ${src}</div>`)
-              .join("");
-          } else {
-            sourceList.innerHTML = '<p>No specific educational documents retrieved for this session.</p>';
-          }
-          
-          const safeSessionId = (sessionId || 'new-session').substring(0, 5);
-          const outputFilename = 'SymptomAssist_Clinical_Summary_' + safeSessionId + '.pdf';
-
-          const originalText = downloadPdfBtn.textContent;
-          downloadPdfBtn.textContent = "Generating...";
-          downloadPdfBtn.disabled = true;
-
-          // html2pdf options
-          const opt = {
-            margin: 10,
-            filename: outputFilename,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { 
-              scale: 2, 
-              useCORS: true, 
-              letterRendering: true,
-              scrollY: 0,
-              logging: false
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-          };
-
-          // Use the template directly - html2pdf handles the cloning and off-screen rendering
-          html2pdf().set(opt).from(template).save().then(() => {
-            downloadPdfBtn.textContent = originalText;
-            downloadPdfBtn.disabled = false;
-          }).catch(err => {
-            console.error("PDF Generation Error:", err);
-            alert("Failed to generate PDF. Please try again.");
-            downloadPdfBtn.textContent = originalText;
-            downloadPdfBtn.disabled = false;
-          });
-        }
-
-        summaryModal.addEventListener("click", (e) => {
-          if (e.target === summaryModal) {
-            summaryModal.classList.remove("show");
-          }
-        });
-
-        // Theme toggle
+        // ============================================================
+        // THEME TOGGLE
+        // ============================================================
         const toggleBtn = document.getElementById("theme-toggle");
 
         if (localStorage.getItem("theme") === "dark") {

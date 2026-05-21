@@ -23,10 +23,10 @@ jobs:
                 python-version: "3.12"
                 cache: "pip"
             
-            - name: Install lightweight CI dependencies
+            - name: Install dependencies
               run: |
                     python -m pip install --upgrade pip
-                    pip install pytest networkx spacy rapidfuzz
+                    pip install pytest -r requirements.txt
                     python -m spacy download en_core_web_sm
 
             - name: Run tests

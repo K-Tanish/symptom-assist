@@ -19,7 +19,7 @@ import os
 import json
 import uuid
 import pathlib
-import base64
+import unicodedata
 from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,20 +27,30 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from groq import AsyncGroq
+from groq import AsyncGroq, GroqError
 from dotenv import load_dotenv
 import logging
 import textwrap
 
+from .core.prompts import SYSTEM_PROMPT_TEMPLATE
 from .core.error_handler import APIErrorHandler, retry_with_backoff
 from .logging_config import setup_logging
+import sys
+import pathlib
 
-from .core.knowledge_graph import (
+# Ensure the root project directory is in sys.path so 'app' can be imported
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+
+from app.core.error_handler import APIErrorHandler, retry_with_backoff
+from app.core.semantic_cache import SemanticCache
+from app.logging_config import setup_logging
+
+from app.core.knowledge_graph import (
     load_graph_from_csv, traverse_graph, find_candidate_conditions,
     get_followup_questions, get_treatment, check_red_flags, graph_summary
 )
-from .core.rag_pipeline import RAGPipeline
-from .core.nlp_extractor import SymptomExtractor
+from app.core.rag_pipeline import RAGPipeline
+from app.core.nlp_extractor import SymptomExtractor
 
 load_dotenv(override=True)
 setup_logging(log_dir="logs", level=logging.INFO)
@@ -63,7 +73,29 @@ RAG = RAGPipeline(csv_path=_DOCS_CSV)
 logging.info("[startup] Loading NLP extractor (dynamic lexicon from CSV)...")
 NLP = SymptomExtractor(csv_path=_SYMPTOM_CSV)
 logging.info("[startup] Groq client ready.")
-GROQ = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
+GROQ = None  # Lazy initialization: will be created on first use
+
+# ---------------------------------------------------------------------------
+# Semantic Cache — shares the sentence-transformer model with RAG to save RAM
+# ---------------------------------------------------------------------------
+logging.info("[startup] Initialising semantic cache...")
+SEMANTIC_CACHE = SemanticCache(
+    model=RAG.retriever.model,                                      # reuse model
+    similarity_threshold=float(os.getenv("CACHE_SIMILARITY_THRESHOLD", "0.92")),
+    ttl_seconds=int(os.getenv("CACHE_TTL_SECONDS", "3600")),
+    max_entries=int(os.getenv("CACHE_MAX_ENTRIES", "500")),
+)
+
+
+def _get_groq_client():
+    """Return or create the Groq client on demand."""
+    global GROQ
+    if GROQ is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise GroqError("GROQ_API_KEY not set")
+        GROQ = AsyncGroq(api_key=api_key)
+    return GROQ
 
 # ---------------------------------------------------------------------------
 # Server-side session store: sessionId -> { symptoms: list[dict], last_active: datetime }
@@ -184,6 +216,8 @@ def build_system_prompt(
     red_flags,
     has_noise=False,
 ) -> str:
+
+    base = SYSTEM_PROMPT_TEMPLATE
 
     base = """You are SymptomAssist, a compassionate AI health assistant.
 You have access to a medical knowledge graph and retrieved medical documents to inform your responses.
@@ -311,7 +345,11 @@ def build_clinical_summary_text(
 
 
 def _escape_pdf_text(text: str) -> str:
-    return text.replace('\\', '\\\\').replace('(', '\\(').replace(')', '\\)')
+    text = text.replace('\\', '\\\\').replace('(', '\\(').replace(')', '\\)')
+    text = text.replace('•', '-').replace('–', '-').replace('—', '-')
+    text = text.replace('“', '"').replace('”', '"').replace('’', "'").replace('‘', "'")
+    text = unicodedata.normalize('NFKD', text)
+    return ''.join(ch for ch in text if ord(ch) < 256)
 
 
 def _build_pdf_pages(lines: list[str], page_width: int = 595, page_height: int = 842, margin_left: int = 40, margin_top: int = 40, line_height: int = 14):
@@ -332,34 +370,41 @@ def _build_pdf_pages(lines: list[str], page_width: int = 595, page_height: int =
 
 
 def build_pdf_bytes(text: str) -> bytes:
+    page_width = 595
+    page_height = 842
+
     lines = []
     for raw_line in text.splitlines():
         wrapped = textwrap.wrap(raw_line, width=90) or [""]
         lines.extend(wrapped)
-    pages = _build_pdf_pages(lines)
+    pages = _build_pdf_pages(lines, page_width=page_width, page_height=page_height)
 
     objects = []
     def add_object(content: str) -> int:
         objects.append(content)
         return len(objects)
 
+    # Pre-calculate object IDs for stable references
     catalog_id = add_object("<< /Type /Catalog /Pages 2 0 R >>")
-    pages_id = add_object("<< /Type /Pages /Kids [3 0 R] /Count {} >>".format(len(pages)))
-    page_ids = []
-    content_ids = []
-    for page in pages:
-        content_id = add_object(f"<< /Length {len(page.encode('latin1'))} >>\nstream\n{page}\nendstream")
-        content_ids.append(content_id)
-    for content_id in content_ids:
-        page_id = add_object(
-            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] /Contents {content_id} 0 R /Resources <</Font <</F1 5 0 R>>>> >>"
-        )
-        page_ids.append(page_id)
+    pages_placeholder_id = add_object("<< /Type /Pages /Kids [] /Count 0 >>")
     font_id = add_object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
 
-    # Rebuild pages object with correct kid refs
+    content_ids = []
+    for page in pages:
+        content_id = add_object(
+            f"<< /Length {len(page.encode('latin1'))} >>\nstream\n{page}\nendstream"
+        )
+        content_ids.append(content_id)
+
+    page_ids = []
+    for content_id in content_ids:
+        page_id = add_object(
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] /Contents {content_id} 0 R /Resources <</Font <</F1 {font_id} 0 R>>>> >>"
+        )
+        page_ids.append(page_id)
+
     pages_obj = f"<< /Type /Pages /Kids [{' '.join(f'{pid} 0 R' for pid in page_ids)}] /Count {len(page_ids)} >>"
-    objects[1] = pages_obj
+    objects[pages_placeholder_id - 1] = pages_obj
 
     xref_offset = 0
     body = []
@@ -412,7 +457,8 @@ async def call_groq_api(messages: list, model: str = "llama-3.1-8b-instant") -> 
         # Mock responder for testing without a real API key
         return "I have received your symptom report. Based on our analysis, we have updated your clinical summary. You can now view it by clicking the 'SUMMARY' button at the top of the page."
 
-    chat_completion = await GROQ.chat.completions.create(
+    groq_client = _get_groq_client()
+    chat_completion = await groq_client.chat.completions.create(
         model=model,
         messages=messages,
         max_tokens=1000,
@@ -571,22 +617,34 @@ async def chat(request: ChatRequest):
             has_noise=bool(extraction.noise),
         )
 
-        # --- Step 6: Call Groq with full context ---
-        # Map roles to Groq roles ("user" -> "user", "model" -> "assistant")
-        messages = [{"role": "system", "content": system_prompt}]
-        for m in request.messages:
-            role = "user" if m.role == "user" else "assistant"
-            messages.append({"role": role, "content": m.content})
+        # --- Step 6: Check semantic cache, then call Groq if needed ---
+        cached_reply = SEMANTIC_CACHE.get(latest_user_msg, all_symptom_names)
+        cache_hit = cached_reply is not None
 
-        try:
-            reply = await call_groq_api(messages)
+        if cache_hit:
+            reply = cached_reply
             if noise_message:
                 reply = f"{noise_message}\n\n{reply}"
-        except Exception as e:
-            # Log full error for debugging
-            APIErrorHandler.log_error(e, "Groq API call failed in /chat endpoint")
-            # Get user-friendly message
-            reply = APIErrorHandler.get_user_message(e)
+            logging.info("[/chat] Served from semantic cache — Groq call skipped")
+        else:
+            # Cache miss — build messages and call Groq
+            # Map roles to Groq roles ("user" -> "user", "model" -> "assistant")
+            messages = [{"role": "system", "content": system_prompt}]
+            for m in request.messages:
+                role = "user" if m.role == "user" else "assistant"
+                messages.append({"role": role, "content": m.content})
+
+            try:
+                reply = await call_groq_api(messages)
+                # Store in cache before adding noise prefix
+                SEMANTIC_CACHE.put(latest_user_msg, all_symptom_names, reply)
+                if noise_message:
+                    reply = f"{noise_message}\n\n{reply}"
+            except Exception as e:
+                # Log full error for debugging
+                APIErrorHandler.log_error(e, "Groq API call failed in /chat endpoint")
+                # Get user-friendly message
+                reply = APIErrorHandler.get_user_message(e)
 
         return ChatResponse(
             reply=reply,
@@ -607,7 +665,10 @@ async def chat(request: ChatRequest):
         logging.error("CRITICAL ERROR IN /chat ENDPOINT:")
         logging.error(err_msg)
         APIErrorHandler.log_error(overall_e, "Critical error in /chat endpoint")
-        with open("error_log.txt", "w", encoding="utf-8") as f:
+        logs_path = _PROJECT_ROOT / "logs"
+        logs_path.mkdir(parents=True, exist_ok=True)
+        error_log_path = logs_path / "error.log"
+        with open(error_log_path, "w", encoding="utf-8") as f:
             f.write(err_msg)
         raise HTTPException(status_code=500, detail=APIErrorHandler.get_user_message(overall_e)) from overall_e
 
@@ -617,7 +678,28 @@ async def clear_session(body: dict):
     """Clears the symptom timeline for a given session (used by 'New Chat')."""
     session_id = body.get("session_id")
     if session_id and session_id in SESSION_STORE:
+        # Invalidate any cached replies tied to this session's symptom context
+        symptom_names = [s["name"] for s in SESSION_STORE[session_id].get("symptoms", [])]
+        if symptom_names:
+            SEMANTIC_CACHE.invalidate_context(symptom_names)
         del SESSION_STORE[session_id]
+    return {"cleared": True}
+
+
+# ---------------------------------------------------------------------------
+# Cache observability endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/cache/stats")
+async def cache_stats():
+    """Return semantic cache hit/miss statistics."""
+    return SEMANTIC_CACHE.stats()
+
+
+@app.post("/cache/clear")
+async def cache_clear():
+    """Manually wipe the entire semantic cache."""
+    SEMANTIC_CACHE.clear()
     return {"cleared": True}
 
 
@@ -881,6 +963,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 def index():
     return FileResponse("static/index.html")
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "version": "2.0"}
 
 if __name__ == "__main__":
     import uvicorn
