@@ -721,15 +721,26 @@ async def cache_stats():
     return SEMANTIC_CACHE.stats()
 
 
+def _require_admin_key(request: Request) -> None:
+    """Raise 401 when the X-Admin-Token header does not match CACHE_ADMIN_KEY."""
+    expected = os.getenv("CACHE_ADMIN_KEY")
+    if not expected:
+        raise HTTPException(status_code=503, detail="Admin key not configured")
+    if request.headers.get("X-Admin-Token") != expected:
+        raise HTTPException(status_code=401, detail="Invalid or missing admin token")
+
+
 @app.post("/cache/clear")
-async def cache_clear():
-    """Manually wipe the entire semantic cache."""
+async def cache_clear(request: Request):
+    """Wipe the entire semantic cache. Requires X-Admin-Token header."""
+    _require_admin_key(request)
     SEMANTIC_CACHE.clear()
     return {"cleared": True}
 
 
 @app.get("/summary/{session_id}", response_model=SummaryResponse)
-async def get_summary(session_id: str):
+@limiter.limit("30/minute")
+async def get_summary(request: Request, session_id: str):
     """Generates a stable, clinical summary for the given session."""
     if session_id not in SESSION_STORE:
         raise HTTPException(status_code=404, detail="Session not found or expired")
