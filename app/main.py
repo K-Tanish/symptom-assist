@@ -108,6 +108,7 @@ def _get_groq_client():
 # ---------------------------------------------------------------------------
 SESSION_STORE: dict[str, dict] = {}
 SESSION_TTL = timedelta(hours=2)
+SESSION_STORE_MAX = int(os.getenv("SESSION_STORE_MAX", "5000"))
 
 
 def _get_or_create_session(session_id: str | None) -> tuple[str, list[dict]]:
@@ -116,6 +117,11 @@ def _get_or_create_session(session_id: str | None) -> tuple[str, list[dict]]:
     if session_id and session_id in SESSION_STORE:
         SESSION_STORE[session_id]["last_active"] = datetime.utcnow()
         return session_id, SESSION_STORE[session_id]["symptoms"]
+    # Evict the oldest session when the store is at capacity so the dict
+    # cannot grow without bound on a long-running server.
+    if len(SESSION_STORE) >= SESSION_STORE_MAX:
+        oldest_id = min(SESSION_STORE, key=lambda sid: SESSION_STORE[sid]["last_active"])
+        del SESSION_STORE[oldest_id]
     new_id = str(uuid.uuid4())
     SESSION_STORE[new_id] = {"symptoms": [], "last_active": datetime.utcnow()}
     return new_id, []
