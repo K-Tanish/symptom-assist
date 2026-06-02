@@ -1,74 +1,124 @@
-# SymptomAssist AI: Neuro-symbolic Healthcare Diagnosis System
-
-SymptomAssist is a hybrid AI medical advisor that combines **Symbolic Logic** (via Knowledge Graphs) and **Neural Networks** (via LLMs) to provide accurate, grounded, and empathetic health assessments.
-
+---
+title: SymptomAssist AI
+emoji: 🩺
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
 ---
 
-##  Project Structure
-The project the following architecture:
+# SymptomAssist AI 🩺
 
-```text
-cl_symptom/
-├── app/                  # Main application package
-│   ├── core/             # AI & Diagnostic logic
-│   │   ├── __init__.py
-│   │   ├── knowledge_graph.py   # Symbolic Inference (NetworkX)
-│   │   ├── nlp_extractor.py     # Symptom extraction (Lexicon-based)
-│   │   └── rag_pipeline.py      # Medical RAG (Semantic Retrieval)
-│   ├── __init__.py
-│   └── main.py           # FastAPI Web Server (Orchestration)
-├── data/                 # Knowledge Datasets
-│   ├── symptom_disease.csv
-│   └── medical_docs.csv
-├── static/               # Frontend Assets
-│   └── index.html        # Premium Glassmorphism UI
-├── .env                  # Environment Variables (API Keys)
-├── requirements.txt      # Project Dependencies
-├── CONTRIBUTING.md       # OSS Contributor Guidelines
-└── README.md             # This file
-```
 
----
+SymptomAssist AI is a neuro-symbolic medical assistant that combines:
 
-##  Setup Instructions
+- Structured reasoning over a symptom-condition knowledge graph
+- Retrieval-augmented context from curated medical documents
+- Conversational response generation through an LLM
 
-### 1. Prerequisites
-- **Python 3.10+** installed.
-- **Groq API Key**: Obtain one from [Groq Cloud Console](https://console.groq.com/).
+It is designed for educational triage support, not clinical diagnosis.
 
-### 2. Install Dependencies
-Run the following command in your terminal:
+## Latest Updates ✨
+
+- Added accessible modal workflows for New Chat and Visit Summary dialogs ♿
+- Improved summary tooling with copy, print, and PDF export support 📄
+- Improved diagnostics UX with richer condition confidence and checklist views 📊
+- Strengthened graph visualization state handling and responsive rerender behavior 🕸️
+- Added better frontend structure via shared header/control styles 🧩
+
+## Core Features 🚀
+
+- Knowledge graph traversal using symptom-to-condition edges 🧠
+- Red-flag symptom detection for urgent guidance 🚨
+- RAG grounding from domain-specific medical documents 📚
+- Conversation memory via session timeline support 🕒
+- Explainable diagnostics panel with confidence and contribution data 🔍
+- Visit-ready summary generation for clinician handoff 📝
+
+## Architecture 🏗️
+
+The app uses a layered pipeline:
+
+1. NLP extractor parses user symptom text.
+2. Knowledge graph scores candidate conditions.
+3. RAG pipeline retrieves matching medical context.
+4. LLM composes grounded, user-friendly guidance.
+5. Frontend renders diagnostics and graph state updates.
+
+For a full architecture walkthrough, see [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md).
+
+## Repository Structure 📁
+
+- `app/`: FastAPI backend and reasoning pipeline
+- `data/`: CSV datasets and local vector store artifacts
+- `static/`: Frontend HTML, CSS, and JavaScript
+- `tests/`: Automated tests
+- `scratch/`: Local experiments and debug scripts
+- `.github/workflows/`: CI and automation
+
+## Quick Start ⚙️
+
+### 1. Prerequisites ✅
+
+- Python 3.10+
+- pip
+- Groq API key
+
+### 2. Clone and Install 📦
+
 ```bash
+git clone https://github.com/KGFCH2/symptom-assist.git
+cd symptom-assist
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment
-Create/Edit the [`.env`](file:///.env) file at the project root:
-```text
-GEMINI_API_KEY=your_gemini_key_optional
-GROQ_API_KEY=your_groq_api_key_here
+### 3. Configure Environment 🔐
+
+Create `.env` in project root:
+
+```env
+GROQ_API_KEY=your_groq_api_key
 ```
-Copy the example environment file and fill in your keys:
 
-cp .env.example .env
----
+### 4. Run the App ▶️
 
-##  Running the System
-
-To start the FastAPI server with live-reloading:
 ```bash
-python -m app.main
+uvicorn app.main:app --reload --port 8000
 ```
-Once started, open your browser at [**http://127.0.0.1:8000**](http://127.0.0.1:8000).
 
----
+Open `http://localhost:8000`.
 
-##  Key Technical Features
-1.  **Neuro-symbolic Reasoning**: Decouples medical facts from conversational reasoning (LLM).
-2.  **Logic-Grounded RAG**: Injects curated medical documentation into the LLM prompt to eliminate hallucinations.
-3.  **Real-time Diagnostics Dashboard**: Live visualization of extracted symptoms, KB matches, and RAG sources.
-4.  **Priority Red Flag Detection**: Automatic highlighting of critical symptoms requiring emergency care.
+## API Endpoints 🌐
 
----
+- `POST /chat`: Main chat and reasoning orchestration endpoint
+- `GET /graph-data`: Graph data for D3 visualization
+- `POST /debug/analyse`: Internal diagnostics payload for debugging
+- `GET /summary/{session_id}`: Visit-ready summary payload
+- `POST /session/clear`: Reset session timeline state
 
+## Development Notes 🛠️
 
+- Keep `.env` and secrets out of version control
+- Follow contribution conventions in [CONTRIBUTING.md](CONTRIBUTING.md)
+- Respect security guidance in [Security.md](Security.md)
+- Use focused, single-purpose pull requests
+
+## Testing 🧪
+
+Run test suite:
+
+```bash
+pytest -q
+```
+
+Optional static checks in repository artifacts:
+
+- `pylint.txt`
+- `bandit.json`
+
+## Disclaimer ⚠️
+
+This project is for educational and research assistance only.
+It does not provide medical diagnosis or treatment.
+In emergencies, contact local emergency services immediately.

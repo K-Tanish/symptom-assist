@@ -19,3 +19,10 @@ __pycache__/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# ChromaDB
+data/chroma_db/
