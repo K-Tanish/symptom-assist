@@ -798,62 +798,46 @@
             .map((c, index) => {
               const pct = Math.round(c.score * 100);
                
-              let confClass = "xai-conf-medium";
-              let confBarColor = "var(--primary-light)";
-              if (c.confidence === "High") { confClass = "xai-conf-high"; confBarColor = "#10b981"; }
-              if (c.confidence === "Low") { confClass = "xai-conf-low"; confBarColor = "#ef4444"; }
-              
-              const matchText = c.match_ratio ? `Match: ${c.match_ratio} symptoms` : "";
- 
-              let contribHtml = "";
-              if (c.contribution && Object.keys(c.contribution).length > 0) {
-                contribHtml = `<div class="xai-contrib">
-                  <div class="xai-title">Symptom Contribution Weight</div>`;
-                for (const [symp, weight] of Object.entries(c.contribution)) {
-                  const wPct = Math.min(Math.round(weight * 100), 100);
-                  contribHtml += `
-                    <div class="xai-bar-row">
-                      <span class="xai-bar-label">${symp}</span>
-                      <div class="xai-bar-track"><div class="xai-bar-fill" style="width: ${wPct}%"></div></div>
-                      <span class="xai-bar-val">${weight.toFixed(2)}</span>
+              // Confidence badge — simple, human-readable label
+              let badgeEmoji = "⚪";
+              let badgeLabel = "Low Probability";
+              let badgeClass = "conf-badge-low";
+              if (c.confidence === "High" || pct >= 70) { badgeEmoji = "🟢"; badgeLabel = "High Likelihood"; badgeClass = "conf-badge-high"; }
+              else if (c.confidence === "Medium" || pct >= 40) { badgeEmoji = "🟡"; badgeLabel = "Possible Match"; badgeClass = "conf-badge-medium"; }
+
+              // Symptom pill tags — matching vs atypical
+              let pillsHtml = "";
+              if (index === 0 && (c.matched_symptoms || c.missing_symptoms)) {
+                const matched = c.matched_symptoms || [];
+                const atypical = c.missing_symptoms || [];
+                pillsHtml = `<div class="symptom-pills">`;
+                if (matched.length > 0) {
+                  pillsHtml += `<div class="pill-group-label">✅ Matching Symptoms</div>
+                    <div class="pill-group">
+                      ${matched.map(s => `<span class="pill pill-match">${s}</span>`).join("")}
                     </div>`;
                 }
-                contribHtml += `</div>`;
-              }
-
-              let checklistHtml = "";
-              if (index === 0 && (c.matched_symptoms || c.missing_symptoms)) {
-                checklistHtml = `
-                  <div class="xai-checklist">
-                    <div class="xai-title">Symptom Checklist</div>
-                    <ul class="xai-list">`;
-                (c.matched_symptoms || []).forEach(s => {
-                  checklistHtml += `<li class="xai-matched"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> ${s}</li>`;
-                });
-                (c.missing_symptoms || []).forEach(s => {
-                  checklistHtml += `<li class="xai-missing"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> ${s}</li>`;
-                });
-                checklistHtml += `</ul></div>`;
+                if (atypical.length > 0) {
+                  pillsHtml += `<div class="pill-group-label">⚠️ Atypical Symptoms</div>
+                    <div class="pill-group">
+                      ${atypical.map(s => `<span class="pill pill-atypical">${s}</span>`).join("")}
+                    </div>`;
+                }
+                pillsHtml += `</div>`;
               }
 
               return `
                 <div class="condition-item">
                   <div class="condition-header">
                     <span class="condition-name">${c.display}</span>
-                    <span class="severity sev-${c.severity}">${c.severity}</span>
-                  </div>
-                  
-                  <div class="xai-match-quality ${confClass}">
-                    <span>Confidence: <strong>${c.confidence || 'Medium'}</strong></span>
-                    <span>${matchText}</span>
+
                   </div>
 
-                  <div class="progress-track" style="margin-top: 6px;">
-                    <div class="progress-fill" style="width: ${pct}%; background: ${confBarColor}"></div>
+                  <div class="conf-badge ${badgeClass}">
+                    ${badgeEmoji} ${badgeLabel}
                   </div>
-                  
-                  ${index === 0 ? checklistHtml : ''}
-                  ${contribHtml}
+
+                  ${index === 0 ? pillsHtml : ''}
                 </div>
               `;
             })
@@ -883,21 +867,32 @@
         const travList = document.getElementById("trav-list");
         const path = data.traversal_path || [];
         if (path.length > 0) {
-          const shown = path.slice(0, 12);
-          travList.innerHTML = 
-            `<div class="traversal-header">Graph Journey (First ${shown.length} Steps)</div>` +
-            `<div class="xai-flowchart">` +
-            shown.map((step, i) => `
-              <div class="xai-flow-step" style="animation-delay:${i * 40}ms">
-                <div class="xai-flow-node">${step.from}</div>
-                <div class="xai-flow-arrow">
-                  <span class="xai-flow-weight">${step.weight}</span>
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"></line><polyline points="19 15 12 22 5 15"></polyline></svg>
-                </div>
-                ${i === shown.length - 1 ? `<div class="xai-flow-node xai-flow-target">${step.to}</div>` : ''}
+          // Build plain English reasoning points from traversal path
+          const start = path[0]?.from || "";
+          const end = path[path.length - 1]?.to || "";
+          const midPoints = [...new Set(path.slice(1, 4).map(s => s.from))].filter(Boolean);
+
+          const reasoningPoints = [
+            `Your reported symptoms pointed towards <strong>${start}</strong> as a key indicator.`,
+            midPoints.length > 0
+              ? `This was linked through related patterns including <strong>${midPoints.join(", ")}</strong>.`
+              : `The system traced connections across your symptom profile.`,
+            `Based on this chain of evidence, <strong>${end}</strong> emerged as a likely match.`
+          ];
+
+          travList.innerHTML = `
+            <div class="reasoning-card">
+              <button class="reasoning-toggle" onclick="this.parentElement.classList.toggle('open')">
+                💡 Why are we suggesting this?
+                <span class="reasoning-arrow">▾</span>
+              </button>
+              <div class="reasoning-body">
+                <ul class="reasoning-list">
+                  ${reasoningPoints.map(p => `<li>${p}</li>`).join("")}
+                </ul>
               </div>
-            `).join("") +
-            `</div>`;
+            </div>
+          `;
         } else {
           travList.innerHTML = '<div class="empty-state">No traversal yet</div>';
         }

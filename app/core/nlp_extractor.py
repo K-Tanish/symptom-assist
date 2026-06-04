@@ -16,17 +16,8 @@ Pipeline:
 import re
 import csv
 import os
-from typing import NamedTuple
-import spacy
-
-try:
-    from rapidfuzz import process as fuzz_process, fuzz
-    _FUZZY_AVAILABLE = True
-except ImportError:  # pragma: no cover
-    _FUZZY_AVAILABLE = False
-
-# Minimum similarity score (0-100) to accept a fuzzy match
-FUZZY_THRESHOLD = 92
+import json
+from typing import NamedTuple, Optional, TypedDict, List
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +200,13 @@ def build_lexicon_from_csv(csv_path: str) -> dict[str, list[str]]:
 # 2. Extractor class (same interface as before)
 # ---------------------------------------------------------------------------
 
+class SymptomTimelineEntry(TypedDict):
+    symptom:  str
+    severity: str
+    onset:    str
+    order:    int
+
+
 class ExtractionResult(NamedTuple):
     """
     Represents the result of symptom extraction.
@@ -244,6 +242,8 @@ class SymptomExtractor:
         else:
             lexicon = {k: list(dict.fromkeys(v)) for k, v in _MANUAL_SYNONYMS.items()}
 
+        self.canonical_symptoms = sorted(list(lexicon.keys()))
+
         # Reverse lookup: phrase → canonical
         self.phrase_to_symptom: dict[str, str] = {}
         for canonical, phrases in lexicon.items():
@@ -274,75 +274,99 @@ class SymptomExtractor:
         print(f"[NLP] Lexicon loaded: {len(lexicon)} canonical symptoms, "
               f"{len(self.phrase_to_symptom)} total phrases")
 
-    def _is_negated(self, doc, start_char: int, end_char: int) -> bool:
+    def llm_extract(self, groq_client, text: str) -> ExtractionResult:
         """
-        Checks whether a detected symptom is negated in the sentence.
-
-        Uses dependency parsing to determine if negation words are associated
-        with the symptom.
-
-        Args:
-            doc (spacy.tokens.Doc): spaCy processed document.
-            start_char (int): Start index of the symptom in text.
-            end_char (int): End index of the symptom in text.
-
-        Returns:
-            bool: True if the symptom is negated, otherwise False.
+        Use Groq to extract structured symptoms, severity, and onset.
+        Matches extracted symptoms against the canonical lexicon.
         """
-        if not doc:
-            return False
+        prompt = f"""Extract medical symptoms from the following user text.
+For each symptom, identify:
+1. The symptom name (map it to the closest match from the provided CANONICAL LIST if possible)
+2. Severity (e.g., mild, severe, "really hurting")
+3. Onset/Context (e.g., "when bending down", "started yesterday")
+4. Order of appearance in the conversation or temporal order (1, 2, 3...)
 
-        # Find tokens that overlap with the character range [start_char, end_char)
-        symptom_tokens = [t for t in doc if t.idx >= start_char and t.idx < end_char]
-        if not symptom_tokens:
-            # Fallback for tokens that might start slightly before start_char (e.g. whitespace)
-            symptom_tokens = [t for t in doc if t.idx + len(t.text) > start_char and t.idx < end_char]
+CANONICAL LIST:
+{", ".join(self.canonical_symptoms[:100])} ... (and others)
 
-        negation_words = {"no", "not", "without", "never", "deny", "denies", "absence", "negative"}
+USER TEXT:
+"{text}"
 
-        for token in symptom_tokens:
-            # 1. Direct children negation (e.g., "no fever")
-            if any(child.dep_ == "neg" or child.lemma_.lower() in negation_words for child in token.children):
-                return True
+Return ONLY a JSON object with the following structure:
+{{
+  "extracted": [
+    {{
+      "symptom": "canonical_name",
+      "raw_symptom": "original_text",
+      "severity": "...",
+      "onset": "...",
+      "order": 1,
+      "negated": false
+    }}
+  ]
+}}
+"""
+        try:
+            completion = groq_client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "system", "content": "You are a medical data extraction assistant. Return valid JSON only."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1
+            )
+            data = json.loads(completion.choices[0].message.content)
+            extracted_list = data.get("extracted", [])
+        except Exception as e:
+            print(f"[NLP] LLM Extraction failed: {e}")
+            # Fallback to keyword extraction
+            return self.extract(text)
+
+        found_symptoms:   list[str] = []
+        negated_symptoms: list[str] = []
+        raw_mentions:     list[str] = []
+        timeline:         list[SymptomTimelineEntry] = []
+
+        for item in extracted_list:
+            sym = item.get("symptom", "").lower().strip()
+            # Basic validation/matching against lexicon if LLM hallucinated a non-existent canonical
+            if sym not in self.canonical_symptoms:
+                # Try to find best match in lexicon
+                best_match = None
+                for canon in self.canonical_symptoms:
+                    if canon in sym or sym in canon:
+                        best_match = canon
+                        break
+                if best_match:
+                    sym = best_match
+                else:
+                    # If no match, keep it but it might not hit in the KG
+                    pass
             
-            # 2. Check ancestors (e.g., "denies pain" or "don't HAVE headache")
-            curr = token
-            while curr != curr.head:
-                curr = curr.head
-                # Check if the ancestor itself is a negation word (e.g. "DENIES pain")
-                if curr.lemma_.lower() in negation_words:
-                    return True
-                # If the ancestor has a negation child (e.g. "don't HAVE headache")
-                if any(child.dep_ == "neg" or child.lemma_.lower() in negation_words for child in curr.children):
-                    return True
-                if curr.pos_ == "VERB":
-                    break
+            if item.get("negated", False):
+                if sym not in negated_symptoms:
+                    negated_symptoms.append(sym)
+            else:
+                if sym not in found_symptoms:
+                    found_symptoms.append(sym)
+                    raw_mentions.append(item.get("raw_symptom", sym))
+                    timeline.append({
+                        "symptom": sym,
+                        "severity": item.get("severity", "unknown"),
+                        "onset": item.get("onset", "unknown"),
+                        "order": item.get("order", 0)
+                    })
 
-        return False
+        # Ensure timeline is sorted by order
+        timeline.sort(key=lambda x: x["order"])
 
-    def _fuzzy_match_token(self, token: str) -> tuple[str, str] | None:
-        """
-        Attempts to fuzzy match a token or phrase against known symptom phrases.
-
-        Args:
-            token (str): Input token or phrase.
-
-        Returns:
-            tuple[str, str] | None: Matched phrase and canonical symptom,
-            or None if no match is found.
-        """
-        if not _FUZZY_AVAILABLE or len(token) < 3:
-            return None
-        result = fuzz_process.extractOne(
-            token,
-            self._all_phrases,
-            scorer=fuzz.WRatio,
-            score_cutoff=FUZZY_THRESHOLD,
+        return ExtractionResult(
+            symptoms     = found_symptoms,
+            raw_mentions = raw_mentions,
+            negated      = negated_symptoms,
+            timeline     = timeline
         )
-        if result is None:
-            return None
-        matched_phrase, score, _ = result
-        return matched_phrase, self.phrase_to_symptom[matched_phrase]
 
     def extract(self, text: str) -> ExtractionResult:
         """

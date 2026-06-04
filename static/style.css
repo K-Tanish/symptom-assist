@@ -1596,6 +1596,46 @@ button {
 }
 
  
+/* ── Reasoning Card ── */
+.reasoning-card { border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; margin-top: 4px; }
+.reasoning-toggle { width: 100%; background: var(--surface-bg); border: none; padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.reasoning-toggle:hover { background: var(--hover-bg); }
+.reasoning-arrow { font-size: 16px; transition: transform 0.2s; }
+.reasoning-card.open .reasoning-arrow { transform: rotate(180deg); }
+.reasoning-body { display: none; padding: 10px 14px; background: var(--card-bg); }
+.reasoning-card.open .reasoning-body { display: block; }
+.reasoning-list { padding-left: 16px; }
+.reasoning-list li { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.6; }
+.reasoning-list li strong { color: var(--text-main); }
+.reasoning-list li:last-child { margin-bottom: 0; }
+
+/* ── Confidence Badges ── */
+.conf-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.conf-badge-high { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.conf-badge-medium { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.conf-badge-low { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+.dark-mode .conf-badge-high { background: rgba(16,185,129,0.1); color: #34d399; border-color: rgba(52,211,153,0.3); }
+.dark-mode .conf-badge-medium { background: rgba(245,158,11,0.1); color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+.dark-mode .conf-badge-low { background: rgba(148,163,184,0.1); color: #94a3b8; border-color: rgba(148,163,184,0.3); }
+
+/* ── Symptom Pill Tags ── */
+.symptom-pills { margin-top: 10px; }
+.pill-group-label { font-size: 11px; font-weight: 600; color: var(--text-muted); margin: 8px 0 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+.pill-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+.pill-match { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.pill-atypical { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.dark-mode .pill-match { background: rgba(16,185,129,0.1); color: #34d399; border-color: rgba(52,211,153,0.3); }
+.dark-mode .pill-atypical { background: rgba(245,158,11,0.1); color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+
 .xai-match-quality {
   display: flex;
   justify-content: space-between;

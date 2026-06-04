@@ -1,3 +1,5 @@
+import json
+import hashlib
 """
 rag_pipeline.py
 ---------------
@@ -13,8 +15,6 @@ Flow:
   4. Retrieve top-k most relevant document chunks via cosine similarity
   5. Return chunks as context to inject into the LLM prompt
 """
-
-
 
 import csv
 import math
@@ -55,12 +55,20 @@ def load_documents_from_csv(csv_path: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 class SemanticRetriever:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2", db_path: str = None):
+    def __init__(
+        self,
+        model_name: str = "all-MiniLM-L6-v2",
+        db_path: str = None,
+        model=None
+    ):
         from sentence_transformers import SentenceTransformer
         import chromadb
         import pathlib
         
-        self.model = SentenceTransformer(model_name)
+        if model is not None:
+            self.model = model
+        else:
+            self.model = SentenceTransformer(model_name)
         
         if db_path is None:
             _here = pathlib.Path(__file__).parent.parent.parent
@@ -259,22 +267,11 @@ class RAGPipeline:
     def retrieve_context(self, query: str, top_k: int = 3, min_score: float = 0.3) -> str:
         """
         Return formatted context string for the LLM prompt.
-        
-        Args:
-            query: User's symptom description
-            top_k: Maximum number of documents to retrieve
-            min_score: Minimum relevance score threshold (0.0 to 1.0).
-                      Documents below this score are excluded to prevent
-                      low-quality context reaching the LLM.
-        
-        Returns:
-            str: Formatted context string, or empty string if nothing relevant found.
         """
         docs = self.retriever.retrieve(query, top_k=top_k)
         if not docs:
             return ""
         
-        # Filter out low relevance chunks
         docs = [doc for doc in docs if doc["relevance_score"] >= min_score]
         if not docs:
             return ""
