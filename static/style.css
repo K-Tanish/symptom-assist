@@ -948,18 +948,169 @@
         backdrop-filter: blur(4px);
       }
 
+      /* ---- Header Controls Styles ---- */
+      .header-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .header-controls button {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .header-controls button:hover {
+        background: var(--hover-bg);
+        border-color: var(--primary-light);
+        color: var(--primary);
+      }
+      #theme-toggle {
+        width: 36px;
+        height: 36px;
+        padding: 0 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+      }
+
+      /* ---- Mobile Bottom Navigation ---- */
+      .mobile-nav-bar {
+        display: none;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 64px;
+        background: var(--chat-bg);
+        border-top: 1px solid var(--border-color);
+        z-index: 1000;
+        justify-content: space-around;
+        align-items: center;
+        padding: 0 16px;
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+      }
+      .dark-mode .mobile-nav-bar {
+        background: #0f172a;
+      }
+      .mobile-nav-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        height: 100%;
+        transition: all 0.2s ease;
+      }
+      .mobile-nav-btn svg {
+        transition: transform 0.2s ease, stroke 0.2s ease;
+      }
+      .mobile-nav-btn.active {
+        color: var(--primary);
+      }
+      .dark-mode .mobile-nav-btn.active {
+        color: var(--primary-light);
+      }
+      .mobile-nav-btn.active svg {
+        stroke: var(--primary);
+        transform: translateY(-2px);
+      }
+      .dark-mode .mobile-nav-btn.active svg {
+        stroke: var(--primary-light);
+      }
+
       /* Mobile handling */
       @media (max-width: 1024px) {
-        #sidebar {
-          display: none;
-        }
         #root {
           width: 100vw;
           height: 100vh;
           border-radius: 0;
+          flex-direction: column;
+        }
+        #chat-section {
+          height: calc(100% - 64px) !important;
+          width: 100% !important;
+          flex: 1;
+        }
+        #sidebar {
+          display: none;
+          height: calc(100% - 64px) !important;
+          width: 100% !important;
+          flex: 1;
+        }
+        .mobile-nav-bar {
+          display: flex;
         }
         .gutter {
           display: none !important;
+        }
+        header {
+          padding: 12px 16px;
+        }
+        .brand-icon {
+          width: 36px;
+          height: 36px;
+        }
+        .brand-icon svg {
+          width: 20px;
+          height: 20px;
+        }
+        .brand-text h1 {
+          font-size: 15px;
+        }
+        .brand-text p {
+          display: none;
+        }
+        .status-indicator span {
+          display: none;
+        }
+        .status-indicator {
+          padding: 6px;
+          border-radius: 50%;
+        }
+        #chat-area {
+          padding: 16px;
+          gap: 16px;
+        }
+        .msg {
+          max-width: 90%;
+        }
+        footer {
+          padding: 16px;
+        }
+        .disclaimer {
+          margin-top: 8px;
+          font-size: 10px;
+        }
+        #suggestion-chips {
+          padding: 4px 0 8px 0;
+          overflow-x: auto;
+          flex-wrap: nowrap;
+          white-space: nowrap;
+          -webkit-overflow-scrolling: touch;
+        }
+        .chip {
+          font-size: 12px;
+          padding: 4px 10px;
+        }
+        #graph-svg {
+          width: 100%;
+          height: 100%;
         }
       }
       /* DIALOG ELEMENT */

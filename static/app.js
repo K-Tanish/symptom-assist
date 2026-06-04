@@ -19,6 +19,27 @@
         }
       }
 
+      function switchMobileView(view) {
+        const isMobile = window.innerWidth <= 1024;
+        if (!isMobile) return;
+
+        document.querySelectorAll(".mobile-nav-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.id === `mob-nav-${view}`);
+        });
+
+        const chatSec = document.getElementById("chat-section");
+        const sidebar = document.getElementById("sidebar");
+
+        if (view === "chat") {
+          chatSec.style.display = "flex";
+          sidebar.style.display = "none";
+        } else {
+          chatSec.style.display = "none";
+          sidebar.style.display = "flex";
+          switchTab(view === "diag" ? "diag" : "graph");
+        }
+      }
+
       // ============================================================
       // PRE-DEFINED FULL KNOWLEDGE GRAPH (Force Simulation)
       // ============================================================
@@ -551,6 +572,19 @@
       function handleViewportResize() {
         window.clearTimeout(LAYOUT.viewportResizeTimer);
         LAYOUT.viewportResizeTimer = window.setTimeout(() => {
+          const isDesktop = window.innerWidth > 1024;
+          if (isDesktop) {
+            document.getElementById("chat-section")?.style.removeProperty("display");
+            document.getElementById("sidebar")?.style.removeProperty("display");
+          } else {
+            const activeMobBtn = document.querySelector(".mobile-nav-bar .mobile-nav-btn.active");
+            if (activeMobBtn) {
+              const view = activeMobBtn.id.replace("mob-nav-", "");
+              switchMobileView(view);
+            } else {
+              switchMobileView("chat");
+            }
+          }
           initSplitLayout();
           scheduleGraphRerender();
         }, 140);
