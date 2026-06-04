@@ -1,0 +1,52 @@
+name: Sync to Hugging Face Spaces
+
+on:
+  push:
+    branches: [main]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Clean and Push to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # 1. Verify token exists
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::HF_TOKEN secret is not set in GitHub repository secrets. Please configure it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          
+          # 2. Create a clean deployment folder (excluding binaries)
+          mkdir -p /tmp/deploy
+          cp -rp . /tmp/deploy/
+          
+          # Remove Git history and binary/dev-db directories
+          cd /tmp/deploy
+          rm -rf .git
+          rm -rf assets
+          rm -rf screenshots
+          rm -rf data/chroma_db
+          
+          # 3. Initialize a clean git repository for Hugging Face
+          git init
+          git checkout -b main
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          
+          # 4. Commit clean files
+          git add .
+          git commit -m "Clean deployment build"
+          
+          # 5. Push to Hugging Face Space
+          git remote add hf https://tanishq06:$HF_TOKEN@huggingface.co/spaces/tanishq06/symptom-assist-ai
+          git push hf main --force

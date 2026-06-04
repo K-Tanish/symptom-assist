@@ -18,9 +18,9 @@
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
-    <div id="confirmModal" class="modal">
+    <dialog id="confirmModal" aria-modal="true" aria-labelledby="confirmModalTitle">
       <div class="modal-box">
-        <h3>Start new session?</h3>
+        <h3 id="confirmModalTitle">Start new session?</h3>
         <p>This will clear your current conversation.</p>
 
         <div class="modal-actions">
@@ -28,11 +28,11 @@
           <button id="confirmBtn">Start New</button>
         </div>
       </div>
-    </div>
+    </dialog>
 
-    <div id="summaryModal" class="modal">
+    <dialog id="summaryModal" aria-modal="true" aria-labelledby="summaryModalTitle">
       <div class="modal-box">
-        <h3 class="summary-title">
+        <h3 id="summaryModalTitle" class="summary-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           Visit-Ready Summary
         </h3>
@@ -44,7 +44,7 @@
           <button class="btn-primary" id="printSummaryBtn">Print Summary</button>
         </div>
       </div>
-    </div>
+    </dialog>
     <div id="root">
       <!-- Left: Chat Section -->
       <section id="chat-section">
@@ -69,7 +69,7 @@
           </div>
           <div class="header-controls">
             <!-- 🌙 Theme Toggle -->
-            <button id="theme-toggle">
+            <button id="theme-toggle" aria-label="Toggle dark mode">
               🌙
             </button>
 
@@ -92,6 +92,20 @@
         <div id="chat-area"></div>
 
         <footer>
+          <div id="preview-container" style="display: none; align-items: center; gap: 12px; margin-bottom: 12px; padding: 8px 12px; background: var(--bg); border-radius: 12px; border: 1px solid #e2e8f0; width: fit-content;">
+            <div style="position: relative; width: 40px; height: 40px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0,0,0,0.1);">
+              <img id="preview-img" src="" style="width: 100%; height: 100%; object-fit: cover;" />
+              <div id="preview-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">
+                <div class="dot" style="width: 4px; height: 4px; background: #fff; animation: pulse 1s infinite;"></div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-main);">Vision Analysis</span>
+              <span id="preview-status" style="font-size: 10px; color: var(--text-muted);">Extracting clinical description...</span>
+            </div>
+            <button id="preview-close-btn" type="button" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; margin-left: 8px;">✕</button>
+          </div>
+
 
           <!-- Symptom Suggestion Chips -->
           <div id="suggestion-chips">
@@ -104,6 +118,29 @@
 
 
           <div class="input-wrapper">
+            <input type="file" id="vision-upload-input" accept="image/*" style="display: none;" />
+
+            <button id="vision-btn" class="multimodal-btn" type="button" title="Upload symptom image"
+  style="width:52px;height:52px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;border-radius:8px;outline:none;box-shadow:none;margin: 0;">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+    <circle cx="8.5" cy="8.5" r="1.5"/>
+    <polyline points="21 15 16 10 5 21"/>
+  </svg>
+</button>
+
+<button id="audio-btn" class="multimodal-btn" type="button" title="Record voice description"
+  style="width:52px;height:52px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;border-radius:8px;outline:none;box-shadow:none;margin-left: -12px;">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+    <line x1="12" y1="19" x2="12" y2="23"/>
+    <line x1="8" y1="23" x2="16" y2="23"/>
+  </svg>
+</button>
+            
+     
+
             <input
               id="input"
               type="text"
@@ -126,6 +163,18 @@
               </svg>
             </button>
           </div>
+          
+          <div class="toggle-wrapper">
+            <span class="toggle-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              Deep Research (PubMed API)
+            </span>
+            <label class="switch">
+              <input type="checkbox" id="deep-research-toggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+
           <p class="disclaimer">
             Not a substitute for professional medical advice. If you have an
             emergency, call 108 (or your local emergency number).
@@ -195,46 +244,9 @@
             </div>
           </div>
 
-          <!-- RAG Card -->
-          <div class="card" id="card-rag">
-            <div class="card-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                <path
-                  d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
-                />
-              </svg>
-              Medical Context (RAG)
-            </div>
-            <div id="rag-list">
-              <div class="empty-state">No documents retrieved</div>
-            </div>
-          </div>
 
-          <!-- Follow-ups Card -->
-          <div class="card" id="card-followups">
-            <div class="card-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              Reasoning Tree
-            </div>
-            <div id="fu-list">
-              <div class="empty-state">Awaiting turns...</div>
-            </div>
-          </div>
+
+
 
           <!-- Traversal Path Card -->
           <div class="card" id="card-traversal">
@@ -321,6 +333,35 @@
           </div>
         </div>
       </aside>
+
+      <!-- Bottom Nav Bar for Mobile -->
+      <nav class="mobile-nav-bar" aria-label="Mobile Navigation">
+        <button class="mobile-nav-btn active" id="mob-nav-chat" onclick="switchMobileView('chat')">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Chat</span>
+        </button>
+        <button class="mobile-nav-btn" id="mob-nav-diag" onclick="switchMobileView('diag')">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="9" x2="15" y2="9"></line>
+            <line x1="9" y1="13" x2="15" y2="13"></line>
+            <line x1="9" y1="17" x2="15" y2="17"></line>
+          </svg>
+          <span>Diagnostics</span>
+        </button>
+        <button class="mobile-nav-btn" id="mob-nav-graph" onclick="switchMobileView('graph')">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+          </svg>
+          <span>Graph</span>
+        </button>
+      </nav>
     </div>
 
     <!-- Hidden Template for PDF Export -->
@@ -375,5 +416,27 @@
     </div>
 
     <script src="/static/app.js"></script>
+  <!-- Add this in your <head> or just above </body> -->
+<style>
+  #vision-btn:hover,
+  #audio-btn:hover {
+    background: #98e9e254 !important;
+    color: #0f766e !important;
+  }
+
+  .dark-mode #vision-btn:hover,
+  .dark-mode #audio-btn:hover {
+    background: #1e293b !important;
+    color: #14b8a6 !important;
+  }
+    body.dark-mode header {
+    background: #0f172a !important;
+    border-bottom: 1px solid #1e293b !important;
+  }
+
+  body.dark-mode header .brand-text h1 {
+    color: #f8fafc !important;
+  }
+</style>
   </body>
 </html>
