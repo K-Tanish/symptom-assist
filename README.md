@@ -1,12 +1,3 @@
----
-title: SymptomAssist AI
-emoji: 🩺
-colorFrom: indigo
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
----
 
 # SymptomAssist AI 🩺
 
@@ -121,4 +112,4 @@ Optional static checks in repository artifacts:
 
 This project is for educational and research assistance only.
 It does not provide medical diagnosis or treatment.
-In emergencies, contact local emergency services immediately.
+
