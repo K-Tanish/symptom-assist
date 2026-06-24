@@ -593,6 +593,67 @@
       const chatArea = document.getElementById("chat-area");
       const inputEl = document.getElementById("input");
       const sendBtn = document.getElementById("send-btn");
+      const voiceBtn = document.getElementById("voice-btn");
+
+      // ============================================================
+      // Voice Input (Web Speech API)
+      // ============================================================
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+      let isListening = false;
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false; // Only get final results for cleaner UX
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+          isListening = true;
+          voiceBtn.classList.add("listening");
+          inputEl.placeholder = "Listening to your symptoms...";
+        };
+
+        recognition.onresult = (event) => {
+          const finalTranscript = event.results[0][0].transcript;
+          if (finalTranscript) {
+            const currentVal = inputEl.value;
+            inputEl.value = currentVal ? currentVal + (currentVal.endsWith(' ') ? '' : ' ') + finalTranscript : finalTranscript;
+            // Trigger input event to enable send button
+            inputEl.dispatchEvent(new Event('input'));
+          }
+        };
+
+        recognition.onerror = (event) => {
+          console.error("Speech recognition error", event.error);
+          stopListening();
+        };
+
+        recognition.onend = () => {
+          stopListening();
+        };
+
+        voiceBtn.addEventListener("click", () => {
+          if (isListening) {
+            recognition.stop();
+          } else {
+            try {
+              recognition.start();
+            } catch (err) {
+              console.error("Could not start speech recognition", err);
+            }
+          }
+        });
+      } else {
+        if (voiceBtn) voiceBtn.style.display = "none";
+        console.warn("Web Speech API not supported in this browser.");
+      }
+
+      function stopListening() {
+        isListening = false;
+        voiceBtn.classList.remove("listening");
+        inputEl.placeholder = "Describe how you're feeling today...";
+      }
 
       function generateSessionId() {
         return typeof crypto !== "undefined" && crypto.randomUUID
