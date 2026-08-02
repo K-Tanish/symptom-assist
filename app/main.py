@@ -627,7 +627,7 @@ async def chat(request: Request, chat_request: ChatRequest):
         journey_edges = build_journey_edges(all_symptoms_data, candidates)
 
         # --- Step 4: RAG retrieval ---
-        if request.deep_research and candidates:
+        if chat_request.deep_research and candidates:
             condition_name = candidates[0]["display"]
             rag_docs = RAG.retrieve_pubmed_raw(condition_name, latest_user_msg, top_k=2)
             # If PubMed returns nothing, graceful fallback to CSV
@@ -649,6 +649,9 @@ async def chat(request: Request, chat_request: ChatRequest):
             has_noise=bool(extraction.noise),
         )
 
+        cached_reply = SEMANTIC_CACHE.get(latest_user_msg, all_symptom_names)
+        cache_hit = cached_reply is not None
+
         if cache_hit:
             reply = cached_reply
             if noise_message:
@@ -658,7 +661,7 @@ async def chat(request: Request, chat_request: ChatRequest):
             # Cache miss — build messages and call Groq
             # Map roles to Groq roles ("user" -> "user", "model" -> "assistant")
             messages = [{"role": "system", "content": system_prompt}]
-            for m in request.messages:
+            for m in chat_request.messages:
                 role = "user" if m.role == "user" else "assistant"
                 messages.append({"role": role, "content": m.content})
 
@@ -676,8 +679,8 @@ async def chat(request: Request, chat_request: ChatRequest):
 
         return ChatResponse(
             reply=reply,
-            extracted_symptoms=all_symptoms,
-            symptom_timeline=all_symptoms,
+            extracted_symptoms=all_symptom_names,
+            symptom_timeline=all_symptom_names,
             structured_timeline=extraction.timeline,
             top_conditions=[
                 {

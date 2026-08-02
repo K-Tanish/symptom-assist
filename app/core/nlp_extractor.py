@@ -17,6 +17,7 @@ import re
 import csv
 import os
 import json
+import spacy
 from typing import NamedTuple, Optional, TypedDict, List
 
 

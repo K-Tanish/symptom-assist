@@ -3,41 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SymptomAssist AI | Intelligent Medical Reasoning</title>
+    <title>SymptomAssist AI | Empathetic Medical Reasoning</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap"
       rel="stylesheet"
     />
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/split.js/dist/split.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont/tabler-icons.min.css" />
     <link rel="stylesheet" href="/static/style.css" />
   </head>
-  <body>
+  <body data-scroll-container>
+    <!-- Background Blobs -->
+    <div class="blob w-[600px] h-[600px] bg-blue-200 -top-20 -left-20" data-scroll data-scroll-speed="-2"></div>
+    <div class="blob w-[500px] h-[500px] bg-orange-100 top-1/2 -right-20" data-scroll data-scroll-speed="1"></div>
+
+    <!-- Modals (Functional) -->
     <dialog id="confirmModal" aria-modal="true" aria-labelledby="confirmModalTitle">
-      <div class="modal-box">
+      <div class="modal-box glass">
         <h3 id="confirmModalTitle">Start new session?</h3>
         <p>This will clear your current conversation.</p>
-
-        <div class="modal-actions">
-          <button id="cancelBtn">Cancel</button>
-          <button id="confirmBtn">Start New</button>
+        <div class="modal-actions flex gap-4 mt-8">
+          <button id="cancelBtn" class="btn-secondary flex-1">Cancel</button>
+          <button id="confirmBtn" class="btn-primary flex-1">Start New</button>
         </div>
       </div>
     </dialog>
 
     <dialog id="summaryModal" aria-modal="true" aria-labelledby="summaryModalTitle">
-      <div class="modal-box">
-        <h3 id="summaryModalTitle" class="summary-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          Visit-Ready Summary
+      <div class="modal-box glass max-w-2xl">
+        <h3 id="summaryModalTitle" class="summary-title text-2xl mb-6">
+          <i class="ti ti-report-medical text-orange"></i> Visit-Ready Summary
         </h3>
-        <div id="summary-text-area">Loading summary...</div>
-        <div class="summary-actions">
+        <div id="summary-text-area" class="mb-6 p-6 bg-white/30 rounded-2xl min-h-[200px] max-h-[60vh] overflow-y-auto font-mono text-sm leading-relaxed">Loading summary...</div>
+        <div class="summary-actions flex flex-wrap gap-3 justify-end">
           <button class="btn-secondary" id="closeSummaryBtn">Close</button>
           <button class="btn-secondary" id="copySummaryBtn">Copy to Clipboard</button>
           <button class="btn-secondary" id="downloadPdfBtn">Download PDF</button>
@@ -45,337 +48,243 @@
         </div>
       </div>
     </dialog>
-    <div id="root">
-      <!-- Left: Chat Section -->
-      <section id="chat-section">
-        <header>
-          <div class="brand">
-            <div class="brand-icon">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
+
+    <!-- Header -->
+    <header class="container flex items-center justify-between py-8">
+      <div class="flex items-center gap-3">
+        <div class="brand-icon w-10 h-10 bg-orange rounded-xl flex items-center justify-center shadow-lg shadow-orange-200/50">
+          <svg class="w-6 h-6" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl tracking-tight leading-none text-navy">SymptomAssist</h1>
+          <p class="text-[10px] opacity-60 font-medium uppercase tracking-widest text-navy">Empathetic Health Intelligence</p>
+        </div>
+      </div>
+      <nav class="hidden md:flex items-center gap-8 text-sm font-semibold opacity-70 text-navy">
+        <a href="#journey" class="hover:text-orange">How it Works</a>
+        <a href="#diagnostics" class="hover:text-orange">Diagnostics</a>
+        <button id="theme-toggle" class="text-xl" aria-label="Toggle theme">🌙</button>
+      </nav>
+      <div class="flex items-center gap-4">
+        <button id="newChatBtn" class="px-6 py-2.5 rounded-full border border-navy/20 text-sm font-bold text-navy hover:bg-navy hover:text-white transition-all">
+          New Session
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-grid">
+          <!-- Main Chat Entry -->
+          <div id="hero-main" class="hero-main glass">
+            <span class="inline-block px-4 py-1.5 bg-blue-50 text-navy text-[10px] font-bold rounded-full mb-6 w-fit uppercase tracking-widest">Cognitive Advisor</span>
+            <h2 class="text-6xl leading-[1.1] mb-8 text-navy">Your health story, <br/> <span class="text-orange italic">understood</span> with care.</h2>
+            <p class="text-lg opacity-70 mb-10 max-w-xl leading-relaxed text-navy">Describe your symptoms in your own words. Our reasoning engine prepares you for your next visit.</p>
+            
+            <div id="chat-container" class="w-full max-w-2xl">
+              <div id="chat-area" class="mb-6 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar"></div>
+              
+              <div id="suggestion-chips" class="mb-6 flex flex-wrap gap-2">
+                <button class="chip" onclick="sendChip('Fever and dry cough')">Fever and dry cough</button>
+                <button class="chip" onclick="sendChip('Sudden headache')">Sudden headache</button>
+                <button class="chip" onclick="sendChip('Back stiffness')">Back stiffness</button>
+                <button class="chip" onclick="sendChip('Stomach bloating')">Stomach bloating</button>
+              </div>
+
+              <div class="input-wrapper relative">
+                <input type="file" id="vision-upload-input" accept="image/*" style="display: none;" />
+                <label class="sr-only" for="input">Describe your symptoms</label>
+                <input id="input" type="text" placeholder="Describe how you're feeling today..." autocomplete="off" class="w-full bg-white/60 border border-white/40 h-16 pl-6 pr-32 rounded-2xl text-lg focus:outline-none focus:ring-4 focus:ring-orange/10 transition-all shadow-inner" />
+                <div class="absolute right-2 top-2 flex items-center gap-1">
+                  <button id="vision-btn" class="w-10 h-12 flex items-center justify-center text-navy/40 hover:text-navy transition-colors" title="Upload image"><i class="ti ti-camera text-xl"></i></button>
+                  <button id="send-btn" disabled class="h-12 w-12 bg-navy text-white rounded-xl flex items-center justify-center hover:bg-orange transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                    <i class="ti ti-arrow-right text-xl"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="flex items-center justify-between mt-6">
+                <div class="toggle-wrapper flex items-center gap-3">
+                  <span class="text-xs font-bold opacity-60 text-navy uppercase tracking-wider">Deep Research (PubMed)</span>
+                  <label class="switch">
+                    <input type="checkbox" id="deep-research-toggle">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="flex items-center gap-4">
+                  <button id="audio-btn" class="flex items-center gap-2 text-xs font-bold text-navy/60 hover:text-navy transition-colors" title="Voice record">
+                    <i class="ti ti-microphone text-lg"></i> RECORD VOICE
+                  </button>
+                  <button id="viewSummaryBtnTrigger" class="flex items-center gap-2 text-xs font-bold text-orange hover:text-orange-light transition-colors">
+                    <i class="ti ti-report-medical text-lg"></i> GENERATE SUMMARY
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature Cards -->
+          <div class="hero-side">
+            <div class="feature-card glass group min-h-[240px]">
+              <img src="/static/images/leaf-macro.jpg" alt="Organic pattern" class="feature-bg absolute inset-0 w-full h-full object-cover opacity-10 group-hover:scale-110 transition-transform duration-1000" />
+              <div class="relative z-10">
+                <h3 class="text-2xl mb-4 text-navy">Deep Research Base</h3>
+                <p class="text-sm opacity-70 leading-relaxed text-navy mb-6">Optionally cross-reference symptoms with live PubMed datasets for evidentiary context.</p>
+                <div class="flex items-center gap-2 text-orange font-bold text-sm">
+                  Explore capabilities <i class="ti ti-arrow-narrow-right text-lg"></i>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card glass flex flex-col justify-between p-8 bg-blue-50/30">
+              <div>
+                <h3 class="text-xl mb-3 text-navy">Reasoning Engine</h3>
+                <div class="p-4 bg-navy/5 rounded-2xl flex items-center gap-3">
+                  <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span class="text-[10px] uppercase tracking-tighter font-bold opacity-60 text-navy">Live Analysis Active</span>
+                </div>
+              </div>
+              <p class="disclaimer text-[10px] opacity-50 text-navy leading-relaxed italic">
+                Not a substitute for professional medical advice. In case of emergency, call your local emergency services (108).
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Journey Section -->
+      <section id="journey" class="roadmap-section py-32 bg-white/20">
+        <div class="container text-center mb-24">
+          <h2 class="text-4xl mb-6 text-navy">How your analysis flows</h2>
+          <p class="text-lg opacity-60 text-navy max-w-2xl mx-auto">A multi-modal journey that transforms clinical descriptions into structured medical reasoning.</p>
+        </div>
+        <div class="roadmap-container relative">
+          <div class="roadmap-line"></div>
+          <div class="roadmap-step glass max-w-md mx-auto mb-20 p-8" data-scroll data-scroll-speed="0.5">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 text-navy">
+              <i class="ti ti-message-2 text-2xl"></i>
+            </div>
+            <h4 class="text-2xl mb-2 text-navy">Symptom Extraction</h4>
+            <p class="text-sm opacity-70 text-navy leading-relaxed">Our NLP extractor identifies specific medical entities from your natural language description in real-time.</p>
+          </div>
+          <div class="roadmap-step glass max-w-md mx-auto mb-20 p-8" data-scroll data-scroll-speed="0.8">
+            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 text-orange">
+              <i class="ti ti-binary-tree-2 text-2xl"></i>
+            </div>
+            <h4 class="text-2xl mb-2 text-navy">Graph Traversal</h4>
+            <p class="text-sm opacity-70 text-navy leading-relaxed">A Bayesian BFS traversal through our medical knowledge graph finds high-probability matches and evidentiary links.</p>
+          </div>
+          <div class="roadmap-step glass max-w-md mx-auto p-8" data-scroll data-scroll-speed="1">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-700">
+              <i class="ti ti-report-medical text-2xl"></i>
+            </div>
+            <h4 class="text-2xl mb-2 text-navy">Visit-Ready Summary</h4>
+            <p class="text-sm opacity-70 text-navy leading-relaxed">All findings are compiled into a professional clinical report ready to share with your healthcare provider.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Diagnostics Section -->
+      <section id="diagnostics" class="py-32 bg-white/40">
+        <div class="container grid grid-cols-1 md:grid-cols-2 gap-20 items-start">
+          <div class="sticky top-32" data-scroll data-scroll-speed="1">
+            <span class="text-orange font-bold text-xs uppercase tracking-widest mb-4 block">Actionable Data</span>
+            <h2 class="text-5xl mb-8 leading-tight text-navy">Clarity for your medical consultation.</h2>
+            <div id="trav-list" class="space-y-4"></div>
+            
+            <!-- Added Reasoning Chain Timeline -->
+            <div class="mt-12">
+              <h4 class="text-[10px] font-bold uppercase tracking-widest opacity-40 text-navy mb-8">Reasoning Chain</h4>
+              <div id="reasoning-chain-list" class="reasoning-chain"></div>
+            </div>
+          </div>
+          <div class="widgets-grid" data-scroll data-scroll-speed="1.2">
+            <div id="panel-diag" class="widget glass col-span-2 p-8 bg-white/60">
+              <div class="flex justify-between items-center mb-8">
+                <h4 class="text-sm font-bold uppercase tracking-widest opacity-40 text-navy">Potential Matches</h4>
+                <span class="px-3 py-1 bg-orange/10 text-orange text-[10px] font-bold rounded-full uppercase tracking-widest">Live Analysis</span>
+              </div>
+              <div id="cond-list" class="space-y-8"></div>
+            </div>
+            <div class="widget glass p-8 min-h-[200px] flex flex-col">
+              <h4 class="text-[10px] font-bold uppercase tracking-widest opacity-40 text-navy mb-6">Identified Symptoms</h4>
+              <div id="symp-list" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div id="card-redflags" class="widget glass p-8 min-h-[200px] flex flex-col border-red-100 bg-red-50/20" style="display: none;">
+              <h4 class="text-[10px] font-bold uppercase tracking-widest text-red-600 mb-6">Priority Red Flags</h4>
+              <div id="rf-list" class="flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Knowledge Graph Section -->
+      <section class="py-32">
+        <div class="container">
+          <div class="text-center mb-16">
+            <h2 class="text-4xl mb-4 text-navy">Interactive Knowledge Graph</h2>
+            <p class="opacity-60 text-navy">Explore the underlying connections in our medical reasoning engine.</p>
+          </div>
+          <div id="panel-graph" class="active">
+            <div id="graph-panel" class="glass h-[700px] relative overflow-hidden bg-white/40">
+              <svg id="graph-svg" width="100%" height="100%"></svg>
+              <div id="graph-empty-hint" class="absolute inset-0 flex flex-col items-center justify-center bg-white/60 z-10 transition-opacity duration-500">
+                <i class="ti ti-microscope text-6xl opacity-10 mb-4"></i>
+                <p class="opacity-60 text-navy font-semibold">Awaiting input to visualize traversal path...</p>
+              </div>
+              <div id="graph-stats" class="absolute top-6 right-6 text-[10px] font-bold opacity-40 uppercase tracking-widest text-navy bg-white/80 px-4 py-2 rounded-full shadow-sm">Awaiting input</div>
+              
+              <div id="graph-legend" class="absolute bottom-6 left-6 flex flex-col gap-3 p-4 glass bg-white/80 rounded-2xl">
+                <div class="flex items-center gap-2 text-[10px] font-bold text-navy/60 uppercase tracking-widest">
+                  <span class="w-3 h-3 rounded-full bg-blue-500"></span> Symptom (input)
+                </div>
+                <div class="flex items-center gap-2 text-[10px] font-bold text-navy/60 uppercase tracking-widest">
+                  <span class="w-3 h-3 rounded-full bg-green-500"></span> Condition (output)
+                </div>
+                <div class="flex items-center gap-2 text-[10px] font-bold text-navy/60 uppercase tracking-widest">
+                  <span class="w-3 h-3 rounded-full bg-orange-400"></span> Traversal edge
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="px-12 py-20 border-t border-navy/5 bg-white/20">
+      <div class="container flex flex-col md:flex-row justify-between gap-16">
+        <div class="max-w-sm">
+          <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 bg-navy rounded-xl flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
                 <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
               </svg>
             </div>
-            <div class="brand-text">
-              <h1>SymptomAssist</h1>
-              <p>Cognitive Health Advisor</p>
-            </div>
+            <h3 class="text-2xl text-navy">SymptomAssist</h3>
           </div>
-          <div class="header-controls">
-            <!-- 🌙 Theme Toggle -->
-            <button id="theme-toggle" aria-label="Toggle dark mode">
-              🌙
-            </button>
-
-            <!-- Summary Button -->
-            <button id="viewSummaryBtn">
-              SUMMARY
-            </button>
-
-            <!-- New Chat Button -->
-            <button id="newChatBtn">
-              NEW CHAT
-            </button>
-            <div class="status-indicator">
-              <div class="status-dot"></div>
-              <span>Live Analysis</span>
-            </div>
-          </div>
-        </header>
-
-        <div id="chat-area"></div>
-
-        <footer>
-          <div id="preview-container" style="display: none; align-items: center; gap: 12px; margin-bottom: 12px; padding: 8px 12px; background: var(--bg); border-radius: 12px; border: 1px solid #e2e8f0; width: fit-content;">
-            <div style="position: relative; width: 40px; height: 40px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0,0,0,0.1);">
-              <img id="preview-img" src="" style="width: 100%; height: 100%; object-fit: cover;" />
-              <div id="preview-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">
-                <div class="dot" style="width: 4px; height: 4px; background: #fff; animation: pulse 1s infinite;"></div>
-              </div>
-            </div>
-            <div style="display: flex; flex-direction: column;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-main);">Vision Analysis</span>
-              <span id="preview-status" style="font-size: 10px; color: var(--text-muted);">Extracting clinical description...</span>
-            </div>
-            <button id="preview-close-btn" type="button" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; margin-left: 8px;">✕</button>
-          </div>
-
-
-          <!-- Symptom Suggestion Chips -->
-          <div id="suggestion-chips">
-            <button class="chip" onclick="sendChip('Fever and dry cough')"> Fever and dry cough</button>
-            <button class="chip" onclick="sendChip('Sore throat, runny nose, and sneezing')"> Sore throat, runny nose, and sneezing</button>
-            <button class="chip" onclick="sendChip('Severe headache with sensitivity to light')"> Severe headache with sensitivity to light</button>
-            <button class="chip" onclick="sendChip('Lower back pain and morning stiffness')"> Lower back pain and morning stiffness</button>
-            <button class="chip" onclick="sendChip('Stomach bloating and abdominal pain')"> Stomach bloating and abdominal pain</button>
-
-            <button 
-  onclick="document.getElementById('suggestion-chips').style.display='none'"
-  style="background: none; border: 1.5px solid #ccc; border-radius: 999px; padding: 6px 14px; cursor: pointer; font-size: 13px; color: #888;">
-  ✕ Clear all
-</button>
-</div>
-
-
-          <div class="input-wrapper">
-            <input type="file" id="vision-upload-input" accept="image/*" style="display: none;" />
-
-            <button id="vision-btn" class="multimodal-btn" type="button" title="Upload symptom image"
-  style="width:52px;height:52px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;border-radius:8px;outline:none;box-shadow:none;margin: 0;">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-    <circle cx="8.5" cy="8.5" r="1.5"/>
-    <polyline points="21 15 16 10 5 21"/>
-  </svg>
-</button>
-
-<button id="audio-btn" class="multimodal-btn" type="button" title="Record voice description"
-  style="width:52px;height:52px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;border-radius:8px;outline:none;box-shadow:none;margin-left: -12px;">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-    <line x1="12" y1="19" x2="12" y2="23"/>
-    <line x1="8" y1="23" x2="16" y2="23"/>
-  </svg>
-</button>
-            
-     
-
-            <input
-              id="input"
-              type="text"
-              placeholder="Describe how you're feeling today..."
-              autocomplete="off"
-            />
-            <button id="send-btn" disabled aria-label="Send message">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-            </button>
-          </div>
-          
-          <div class="toggle-wrapper">
-            <span class="toggle-label">
-              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              Deep Research (PubMed API)
-            </span>
-            <label class="switch">
-              <input type="checkbox" id="deep-research-toggle">
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <p class="disclaimer">
-            Not a substitute for professional medical advice. If you have an
-            emergency, call 108 (or your local emergency number).
+          <p class="text-sm opacity-50 leading-relaxed text-navy">
+            SymptomAssist AI is a multi-modal reasoning advisor designed to help patients structure their symptoms before a medical visit. It uses professional knowledge graphs and NLP to extract insights, but is not a substitute for professional medical advice.
           </p>
-        </footer>
-      </section>
-
-      <!-- Right: Diagnostics Sidebar -->
-      <aside id="sidebar">
-        <div class="sidebar-header">
-          <h2>Diagnostics Panel</h2>
-          <p>Multi-modal Reasoning Output</p>
-          <div class="tab-bar">
-            <button
-              class="tab-btn active"
-              id="tab-diag"
-              onclick="switchTab('diag')"
-            >
-              Diagnostics
-            </button>
-            <button class="tab-btn" id="tab-graph" onclick="switchTab('graph')">
-              Knowledge Graph
-            </button>
-          </div>
         </div>
-
-        <!-- TAB 1: Diagnostics -->
-        <div id="panel-diag" class="tab-panel active sidebar-content">
-          <!-- Symptoms Card -->
-          <div class="card" id="card-symptoms">
-            <div class="card-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              Extracted Symptoms
-            </div>
-            <div id="symp-list" class="badge-grid">
-              <div class="empty-state">Waiting for patient description...</div>
-            </div>
+        <div class="flex flex-col justify-between items-end">
+          <div class="flex gap-8 text-xs font-bold text-navy opacity-40 uppercase tracking-widest">
+            <a href="#" class="hover:text-orange">Privacy Policy</a>
+            <a href="#" class="hover:text-orange">Terms of Service</a>
+            <a href="#" class="hover:text-orange">Contact</a>
           </div>
-
-          <!-- Conditions Card -->
-          <div class="card" id="card-conditions">
-            <div class="card-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-                />
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                <line x1="12" y1="22.08" x2="12" y2="12" />
-              </svg>
-              Traversal Matches
-            </div>
-            <div id="cond-list">
-              <div class="empty-state">Awaiting traversal...</div>
-            </div>
-          </div>
-
-
-
-
-
-          <!-- Traversal Path Card -->
-          <div class="card" id="card-traversal">
-            <div class="card-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-              </svg>
-              BFS Traversal Path
-            </div>
-            <div id="trav-list">
-              <div class="empty-state">Graph not yet traversed</div>
-            </div>
-          </div>
-
-          <!-- Red Flags Card -->
-          <div class="card priority-redflags" id="card-redflags">
-            <div class="card-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-                />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-              Priority Red Flags
-            </div>
-            <div id="rf-list" class="badge-grid"></div>
-          </div>
+          <p class="text-[10px] font-bold opacity-40 uppercase tracking-widest mt-12 text-navy">© 2026 SymptomAssist AI Research Team</p>
         </div>
+      </div>
+    </footer>
 
-        <!-- TAB 2: Traversal Graph -->
-        <div id="panel-graph" class="tab-panel graph-tab-panel">
-          <div id="graph-panel" class="graph-container-inner">
-            <svg
-              id="graph-svg"
-              width="800"
-              height="600"
-              viewBox="0 0 800 600"
-            ></svg>
-            <div id="graph-empty-hint" class="graph-empty-overlay">
-              <svg
-                width="48"
-                height="48"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#cbd5e1"
-                stroke-width="1.5"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 8v4l3 3" />
-              </svg>
-              <p class="graph-empty-text">
-                Graph builds as you chat.<br />Send a symptom description to
-                begin traversal.
-              </p>
-            </div>
-            <div id="graph-legend" class="graph-legend-bottom">
-              <div class="legend-item">
-                <div class="legend-dot dot-symptom"></div>
-                Symptom (input)
-              </div>
-              <div class="legend-item">
-                <div class="legend-dot dot-condition"></div>
-                Condition (output)
-              </div>
-              <div class="legend-item">
-                <div class="legend-dot dot-traversal"></div>
-                Traversal edge
-              </div>
-            </div>
-            <div id="graph-stats" class="graph-stats-top">
-              Traversal Graph — awaiting input
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Bottom Nav Bar for Mobile -->
-      <nav class="mobile-nav-bar" aria-label="Mobile Navigation">
-        <button class="mobile-nav-btn active" id="mob-nav-chat" onclick="switchMobileView('chat')">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
-          <span>Chat</span>
-        </button>
-        <button class="mobile-nav-btn" id="mob-nav-diag" onclick="switchMobileView('diag')">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="9" y1="9" x2="15" y2="9"></line>
-            <line x1="9" y1="13" x2="15" y2="13"></line>
-            <line x1="9" y1="17" x2="15" y2="17"></line>
-          </svg>
-          <span>Diagnostics</span>
-        </button>
-        <button class="mobile-nav-btn" id="mob-nav-graph" onclick="switchMobileView('graph')">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="18" cy="5" r="3"></circle>
-            <circle cx="6" cy="12" r="3"></circle>
-            <circle cx="18" cy="19" r="3"></circle>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-          </svg>
-          <span>Graph</span>
-        </button>
-      </nav>
-    </div>
-
-    <!-- Hidden Template for PDF Export -->
+    <!-- PDF Template (Hidden) -->
     <div id="pdf-export-container" class="off-screen">
       <div id="clinical-report-template" class="clinical-report">
         <div class="report-header">
           <div class="report-brand">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="30" height="30">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#003262" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="30" height="30">
               <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
             </svg>
             <div class="report-title-group">
@@ -388,32 +297,26 @@
             <p><strong>Session ID:</strong> <span id="pdf-session-id"></span></p>
           </div>
         </div>
-
         <div class="report-disclaimer">
           <strong>MEDICAL DISCLAIMER:</strong> This document was generated by SymptomAssist, an AI-powered educational tool. It is NOT a medical record or diagnosis. It is intended to help a patient communicate symptoms to a healthcare professional. Do not use this to self-diagnose or delay seeking professional care.
         </div>
-
         <div id="pdf-red-flags" class="report-section urgent-section urgent-flags-hidden">
           <h2 class="section-title">⚠️ URGENT: Red Flags Detected</h2>
           <div id="pdf-rf-list" class="report-content"></div>
         </div>
-
         <div class="report-section">
           <h2 class="section-title">Patient Reported Symptoms</h2>
           <div id="pdf-symptom-list" class="report-content"></div>
         </div>
-
         <div class="report-section">
           <h2 class="section-title">AI Knowledge Graph Analysis</h2>
           <p class="section-hint">Matches found in structured medical graph (ordered by traversal score). These are NOT diagnoses.</p>
           <div id="pdf-condition-list" class="report-content"></div>
         </div>
-
         <div class="report-section">
           <h2 class="section-title">Educational Context & Sources</h2>
           <div id="pdf-source-list" class="report-content"></div>
         </div>
-
         <div class="report-footer">
           <p>Generated by SymptomAssist Cognitive Health Advisor</p>
           <p>© 2026 SymptomAssist AI Research Team</p>
@@ -421,28 +324,11 @@
       </div>
     </div>
 
+    <script>
+      document.querySelectorAll('.roadmap-step').forEach((step, index) => {
+        step.style.setProperty('--reveal-delay', `${index * 90}ms`);
+      });
+    </script>
     <script src="/static/app.js"></script>
-  <!-- Add this in your <head> or just above </body> -->
-<style>
-  #vision-btn:hover,
-  #audio-btn:hover {
-    background: #98e9e254 !important;
-    color: #0f766e !important;
-  }
-
-  .dark-mode #vision-btn:hover,
-  .dark-mode #audio-btn:hover {
-    background: #1e293b !important;
-    color: #14b8a6 !important;
-  }
-    body.dark-mode header {
-    background: #0f172a !important;
-    border-bottom: 1px solid #1e293b !important;
-  }
-
-  body.dark-mode header .brand-text h1 {
-    color: #f8fafc !important;
-  }
-</style>
   </body>
 </html>
